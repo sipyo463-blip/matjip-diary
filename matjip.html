@@ -133,6 +133,7 @@ input[type=file]{display:none}
 <div id="toast"></div>
 <input type="file" id="fCam" accept="image/*" capture="environment">
 <input type="file" id="fAlb" accept="image/*">
+<input type="file" id="fRaw">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function(){
@@ -267,7 +268,9 @@ function jpegExif(v){
  }
  return null;
 }
+var DBG={};
 function exifGps(buf){
+ DBG={tiff:false,gps:false};
  var v=new DataView(buf),n=v.byteLength,i,r;
  try{if(v.getUint16(0)===0xFFD8){r=jpegExif(v);if(r)return r}}catch(e){}
  for(i=0;i<n-8;i++){ /* HEIC 등: TIFF 머리글을 직접 찾는다 */
@@ -277,11 +280,12 @@ function exifGps(buf){
  return null;
 }
 function tiff(v,s){
- var le=v.getUint16(s)===0x4949;
+ var le=v.getUint16(s)===0x4949;DBG.tiff=true;
  var g16=function(o){return v.getUint16(o,le)},g32=function(o){return v.getUint32(o,le)};
  var ifd=s+g32(s+4),n=g16(ifd),gps=0,i;
  for(i=0;i<n;i++){var e=ifd+2+i*12;if(g16(e)===0x8825)gps=s+g32(e+8)}
  if(!gps)return null;
+ DBG.gps=true;
  var m=g16(gps),lat,lng,lr='N',nr='E';
  var rat=function(e){var a=s+g32(e+8);return g32(a)/g32(a+4)+g32(a+8)/g32(a+12)/60+g32(a+16)/g32(a+20)/3600};
  for(i=0;i<m;i++){var x=gps+2+i*12,t=g16(x);
@@ -299,6 +303,7 @@ async function takeFile(file,src){
  try{
   var gps=null;
   try{gps=exifGps(await file.arrayBuffer())}catch(e){}
+  S.dbg={tiff:DBG.tiff,gps:DBG.gps,type:file.type||''};
   var img=await loadImg(file);
   S.photo=shrink(img,640);S.src=src;
   if(gps){S.photoGps=gps;S.gpsFrom='exif'}
@@ -343,9 +348,11 @@ function locCard(){
  var t,s;
  if(S.photoGps&&S.gpsFrom==='exif'){t='사진에서 위치를 찾았어요';s=S.photoAddr||'주소를 확인하는 중…'}
  else if(S.photoGps){t='현재 위치를 함께 저장해요';s=S.photoAddr||'주소를 확인하는 중…'}
- else if(S.src==='album'){t='사진에서 위치를 읽지 못했어요';s='폰이 위치 정보를 지웠을 수 있어요. 아이폰은 사진을 고를 때 \'옵션\'에서 위치를 켜 주세요. 동네와 같이 적어도 돼요.'}
+ else if(S.src==='album'){t='사진에서 위치를 읽지 못했어요';var d=S.dbg||{};
+  s=(!d.tiff?'사진 정보(EXIF)가 통째로 없어요. 앨범에서 고르는 과정에서 폰이 지웠거나, 메신저로 받은 사진일 수 있어요.':'사진 정보는 있는데 위치 항목이 비어 있어요. 폰이 앨범에서 고르는 과정에 위치를 지운 거예요.')+' 아래 \'원본 파일로 다시 고르기\'를 써 보거나, 동네와 같이 적어 주세요.'}
  else{t='위치를 확인하지 못했어요';s='동네와 같이 적어 주세요. 예) 가정동 접시고기'}
- return '<div class="card" style="padding:14px 16px;display:flex;flex-direction:column;gap:2px"><div style="font-size:14px;font-weight:700">'+t+'</div><div class="sub" id="locSub">'+esc(s)+'</div></div>';
+ var raw=(!S.photoGps&&S.src==='album')?'<label for="fRaw" style="font-size:13px;font-weight:700;text-decoration:underline;cursor:pointer;margin-top:6px">원본 파일로 다시 고르기</label>':'';
+ return '<div class="card" style="padding:14px 16px;display:flex;flex-direction:column;gap:2px"><div style="font-size:14px;font-weight:700">'+t+'</div><div class="sub" id="locSub">'+esc(s)+'</div>'+raw+'</div>';
 }
 function vPhoto(){
  return '<div class="scr"><div class="edge"></div>'+back()+
@@ -576,6 +583,7 @@ document.addEventListener('change',function(e){
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id==='qName'){e.preventDefault();e.target.blur();doFind()}});
 $('#fCam').addEventListener('change',function(e){var f=e.target.files[0];e.target.value='';takeFile(f,'camera')});
 $('#fAlb').addEventListener('change',function(e){var f=e.target.files[0];e.target.value='';takeFile(f,'album')});
+$('#fRaw').addEventListener('change',function(e){var f=e.target.files[0];e.target.value='';takeFile(f,'album')});
 
 /* ---------- 기존 시트 가져오기 (1회) ---------- */
 async function maybeImport(){
