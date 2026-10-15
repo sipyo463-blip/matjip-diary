@@ -88,7 +88,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 
 /* maps */
 .mapbox{position:relative;flex:1;min-height:150px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#E0D6BE}
-.mapbox>div,#fmap{position:absolute;inset:0}
+.mapbox>div,#fmap,#cmap{position:absolute!important;inset:0!important}
 .leaflet-container{background:#E0D6BE;font-family:inherit}
 .leaflet-tile-pane{filter:sepia(.55) saturate(.55) contrast(.92) brightness(1.04)}
 .pn{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--paper);border:2px solid var(--paper);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
@@ -100,7 +100,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 #fmap.nv img,#cmap.nv img{filter:sepia(.28) saturate(.8)}
 /* find */
 .fwrap{position:absolute;inset:0;background:var(--paper)}
-#fmap{inset:0 0 46% 0}
+#fmap{inset:0 0 46% 0!important}
 .fsearch{position:absolute;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 14px);z-index:600;display:flex;flex-direction:column;gap:8px}
 .chips{display:flex;gap:8px}
 .chip{height:34px;padding:0 14px;border-radius:9px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:700;display:flex;align-items:center}
