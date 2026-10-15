@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#EBE3D0">
+<title>나의 맛집 다이어리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+:root{--paper:#EBE3D0;--card:#F5EFDF;--ink:#3E352B;--sub:#8C7F6B;--line:#CDBFA6;--stamp:#9A5B3E;--chip:#E3D8C0;--kraft:#B8975F;--ph:#B3A58C}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#D9CFB8}
+body{font-family:'Noto Sans KR',-apple-system,sans-serif;color:var(--ink);letter-spacing:-0.01em;overscroll-behavior:none}
+button,input,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+button{border:0;background:none;padding:0;cursor:pointer}
+#app{max-width:480px;height:100dvh;margin:0 auto;position:relative;overflow:hidden;background:var(--paper)}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;overflow:hidden;
+ padding:calc(env(safe-area-inset-top,0px) + 22px) 22px calc(env(safe-area-inset-bottom,0px) + 20px);
+ background:radial-gradient(ellipse at 50% 38%,transparent 52%,rgba(140,100,45,.20) 100%),
+ url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42  0 0 0 0 .31  0 0 0 0 .16  0 0 0 .55 -.08'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/220px 220px,
+ linear-gradient(#D8CBB0 1px,transparent 1px) 0 0/32px 32px,linear-gradient(90deg,#D8CBB0 1px,transparent 1px) 0 0/32px 32px,var(--paper)}
+.scr.pad{padding-top:calc(env(safe-area-inset-top,0px) + 36px)}
+.edge{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--kraft);z-index:2}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--sub)}
+.h1{font-size:30px;font-weight:800;letter-spacing:-0.045em;line-height:1.2;margin:2px 0 0}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.back{font-size:26px;line-height:1;height:34px;width:34px;margin-left:-8px;color:var(--ink)}
+.sub{font-size:13px;color:var(--sub)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px}
+.field{background:var(--card);border:1px solid var(--line);border-radius:14px;height:54px;padding:0 16px;display:flex;align-items:center;gap:10px;font-size:16px}
+.field input{flex:1;min-width:0;border:0;outline:0;background:none;font-size:16px}
+.field input::placeholder,textarea::placeholder{color:var(--ph)}
+.field svg{flex:none;color:var(--sub)}
+.btn{height:54px;border-radius:14px;background:var(--ink);color:var(--paper);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn.line{background:none;color:var(--ink);border:1px solid var(--ink);height:48px;font-size:14px}
+.btn[disabled]{opacity:.55}
+.link{text-align:center;font-size:13px;color:var(--sub);padding:4px;text-decoration:underline;text-underline-offset:3px}
+.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.grow{flex:1;min-height:0}
+
+/* home */
+.memo{flex:1;border-radius:14px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;width:100%}
+.memo .ic{width:24px;height:24px}
+.memo.dark{background:var(--ink);color:var(--paper)}
+.memo.dark .eyebrow{color:#A89A82}
+.memo b{display:block;font-size:28px;font-weight:800;letter-spacing:-0.05em}
+.memo span.d{display:block;font-size:13px;margin-top:4px;color:var(--sub)}
+.memo.dark span.d{color:rgba(235,227,208,.62)}
+.rule{border-top:1px solid var(--line);margin:8px 0 6px}
+
+/* viewfinder */
+.vf{position:relative;flex:1;min-height:240px;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,#4a443d,#1c1916);color:#fff}
+.vf video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.frame{position:absolute;left:18px;right:18px;top:50%;height:132px;margin-top:-66px;box-shadow:0 0 0 999px rgba(20,17,14,.42);pointer-events:none}
+.frame i{position:absolute;width:24px;height:24px;border:0 solid #fff}
+.frame i:nth-child(1){left:0;top:0;border-left-width:2px;border-top-width:2px}
+.frame i:nth-child(2){right:0;top:0;border-right-width:2px;border-top-width:2px}
+.frame i:nth-child(3){left:0;bottom:0;border-left-width:2px;border-bottom-width:2px}
+.frame i:nth-child(4){right:0;bottom:0;border-right-width:2px;border-bottom-width:2px}
+.vfbar{position:absolute;left:0;right:0;bottom:22px;display:flex;align-items:center;justify-content:center}
+.alb{position:absolute;left:22px;width:48px;height:48px;border-radius:9px;border:1.5px solid rgba(255,255,255,.8);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;gap:2px}
+.alb .ic{width:20px;height:20px}
+.shut{width:72px;height:72px;border-radius:50%;border:3px solid #fff;display:flex;align-items:center;justify-content:center}
+.shut i{width:56px;height:56px;border-radius:50%;background:#fff;display:block}
+.shut:active i{transform:scale(.9)}
+.vfmsg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 40px;font-size:14px;line-height:1.6;color:#eee;z-index:2}
+.vfmsg label{display:inline-block;margin-top:12px;padding:10px 18px;border-radius:9px;border:1px solid rgba(255,255,255,.7);font-weight:700;cursor:pointer}
+
+/* photo */
+.ph{height:200px;border-radius:14px;background:#26221e center/cover no-repeat;position:relative;flex:none;overflow:hidden}
+.ph.wide{height:150px}
+.ph em{position:absolute;left:14px;bottom:12px;font-size:12px;color:#fff;font-style:normal;opacity:.9;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+
+/* rows */
+.row{background:var(--card);border:1px solid var(--line);border-radius:14px;display:flex;align-items:center;gap:12px;padding:10px 14px 10px 10px;width:100%;text-align:left;flex:none}
+.row.sel{border-color:var(--ink)}
+.th{width:44px;height:44px;border-radius:14px;background:var(--chip) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex:none}
+.mid{flex:1;min-width:0}
+.nm{font-size:17px;font-weight:700;letter-spacing:-0.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{font-size:12px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt{text-align:right;font-size:13px;font-weight:700;flex:none}
+.rt.g{color:var(--sub);font-weight:400}
+.stamp{display:inline-flex;border:1.5px solid var(--stamp);color:var(--stamp);border-radius:9px;padding:0 5px;font-size:10px;font-weight:700;transform:rotate(-6deg);margin-top:2px}
+.list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
+.empty{text-align:center;color:var(--sub);font-size:14px;line-height:1.7;padding:30px 10px}
+
+/* maps */
+.mapbox{position:relative;flex:1;min-height:150px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#E0D6BE}
+.mapbox>div,#fmap{position:absolute;inset:0}
+.leaflet-container{background:#E0D6BE;font-family:inherit}
+.leaflet-tile-pane{filter:sepia(.55) saturate(.55) contrast(.92) brightness(1.04)}
+.pn{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--paper);border:2px solid var(--paper);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.pn.on{background:var(--stamp);transform:scale(1.15)}
+.pn.sm{width:22px;height:22px}
+.me{width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:0 0 0 7px rgba(62,53,43,.14)}
+.melab{position:absolute;left:10px;bottom:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
+
+/* find */
+.fwrap{position:absolute;inset:0;background:var(--paper)}
+#fmap{inset:0 0 46% 0}
+.fsearch{position:absolute;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 14px);z-index:600;display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;gap:8px}
+.chip{height:34px;padding:0 14px;border-radius:9px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:700;display:flex;align-items:center}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.sheet{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:600;background:var(--paper);border-radius:14px 14px 0 0;border-top:1px solid var(--line);padding:10px 18px 0;display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 18px rgba(62,53,43,.10)}
+.grab{align-self:center;width:36px;height:4px;border-radius:2px;background:var(--line);flex:none}
+.sh{display:flex;align-items:baseline;justify-content:space-between;flex:none}
+.sh b{font-size:22px;font-weight:700;letter-spacing:-0.03em}
+.tabs{flex:none;margin:0 -18px;height:calc(60px + env(safe-area-inset-bottom,0px));padding:0 70px env(safe-area-inset-bottom,0px);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;font-size:12px;color:var(--sub);background:var(--paper)}
+.tabs .on{color:var(--ink);font-weight:700;border-bottom:2px solid var(--ink);padding-bottom:2px}
+
+/* detail */
+.spec{display:flex;flex-direction:column;gap:10px;background:var(--card);border-radius:14px;padding:16px}
+.spec .r{display:flex;gap:14px;font-size:14px;line-height:1.6}
+.spec .k{width:48px;color:var(--sub);flex:none}
+.spec .v{width:1px;background:var(--line);flex:none}
+.spec textarea{flex:1;border:0;outline:0;background:none;resize:none;font-size:14px;line-height:1.6;min-height:24px;padding:0}
+.warn{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px dashed var(--stamp);color:var(--stamp);border-radius:14px;padding:12px 14px;font-size:13px;font-weight:700}
+.warn button{border:1px solid var(--stamp);border-radius:9px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--stamp)}
+.two{display:flex;gap:10px}.two>*{flex:1}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);background:var(--ink);color:var(--paper);font-size:13px;padding:10px 16px;border-radius:9px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .2s;max-width:86vw;text-align:center}
+#toast.on{opacity:1}
+.spin{width:16px;height:16px;border:2px solid rgba(235,227,208,.4);border-top-color:var(--paper);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+input[type=file]{display:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<input type="file" id="fCam" accept="image/*" capture="environment">
+<input type="file" id="fAlb" accept="image/*">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+'use strict';
+var APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbwUOS0rfTpwD_8Qx-5lBWxRsHQrKkf-FSbaIE3QN4BHEOWkSx3E1_WsxOr-aGSNApNS/exec';
+var KEY='matjip_places_v2',IMPORT_KEY='matjip_sheet_imported_v2';
+var $=function(s){return document.querySelector(s)};
+var app=$('#app');
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+
+/* ---------- storage ---------- */
+var places=[];
+try{places=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){places=[]}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(places))}catch(e){toast('저장 공간이 가득 찼어요. 사진이 많으면 일부를 지워주세요')}}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function byId(id){return places.filter(function(p){return p.id===id})[0]}
+
+/* ---------- helpers ---------- */
+var tt;
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('on')},2400)}
+function dist(a,b,c,d){var R=6371000,r=Math.PI/180,x=(c-a)*r,y=(d-b)*r;var h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)*Math.sin(y/2);return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))}
+function fmt(m){if(m==null)return '';return m<1000?Math.round(m/10)*10+'m':(m/1000).toFixed(1)+'km'}
+function dateLabel(t){var d=new Date(t);return (d.getMonth()+1)+'월 '+d.getDate()+'일'}
+function today(){var d=new Date(),w=['일','월','화','수','목','금','토'][d.getDay()];return d.getFullYear()+'. '+(d.getMonth()+1)+'. '+d.getDate()+' | '+w+'요일'}
+var CATS=[['고기집',/고기|갈비|삼겹|족발|보쌈|곱창|막창|구이|바비큐|접시/],['면요리',/면|국수|칼국수|라멘|우동|냉면|파스타|짬뽕|짜장/],['국물',/국밥|탕|찌개|전골|해장|설렁|순대/],['카페',/카페|커피|디저트|베이커리|빵|케이크/],['브런치',/브런치/],['일식',/초밥|스시|돈카츠|돈까스|오마카세|이자카야|일식/],['치킨',/치킨|통닭|닭/],['양식',/피자|버거|스테이크|양식/],['분식',/떡볶이|김밥|분식/]];
+function cat(n){for(var i=0;i<CATS.length;i++)if(CATS[i][1].test(n))return CATS[i][0];return '음식점'}
+function ini(n){return esc((String(n).trim()[0]||'맛'))}
+function copy(t){try{navigator.clipboard.writeText(t).then(function(){toast('복사했어요')},fb)}catch(e){fb()}function fb(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('복사했어요')}catch(e){toast('복사하지 못했어요')}a.remove()}}
+
+/* ---------- location / geocoding ---------- */
+var S={screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,stream:null,map:null,mk:[],stack:[]};
+
+function locate(){
+ return new Promise(function(res){
+  if(!navigator.geolocation){res(null);return}
+  navigator.geolocation.getCurrentPosition(function(p){
+   S.pos={lat:p.coords.latitude,lng:p.coords.longitude};
+   if(!S.posLabel)rev(S.pos.lat,S.pos.lng).then(function(r){if(r){S.posLabel=r.dong;var e=$('#loc');if(e)e.textContent=S.posLabel}}).catch(function(){});
+   res(S.pos);
+  },function(){res(null)},{enableHighAccuracy:true,timeout:9000,maximumAge:60000});
+ });
+}
+var lastNomi=0;
+async function nomi(path,params){
+ var wait=Math.max(0,lastNomi+1100-Date.now());lastNomi=Date.now()+wait;if(wait)await sleep(wait);
+ var u=new URL('https://nominatim.openstreetmap.org/'+path);
+ var all=Object.assign({format:'jsonv2','accept-language':'ko',addressdetails:1},params);
+ Object.keys(all).forEach(function(k){u.searchParams.set(k,all[k])});
+ var r=await fetch(u.toString());if(!r.ok)throw new Error('HTTP '+r.status);return r.json();
+}
+function addrFrom(r){
+ var a=r.address||{};var seen={},o=[];
+ [a.province||a.state,a.city||a.county,a.borough||a.city_district,a.suburb||a.quarter||a.neighbourhood||a.village||a.town,a.road,a.house_number].forEach(function(x){if(x&&!seen[x]){seen[x]=1;o.push(x)}});
+ return o.length?o.join(' '):String(r.display_name||'').split(',').slice(0,3).join(' ').trim();
+}
+function dongFrom(r){var a=r.address||{};return a.suburb||a.quarter||a.neighbourhood||a.village||a.town||a.borough||a.city_district||a.city||''}
+async function rev(lat,lng){try{var r=await nomi('reverse',{lat:lat,lon:lng,zoom:18});return {addr:addrFrom(r),dong:dongFrom(r)}}catch(e){return null}}
+function vb(c,d){return (c.lng-d)+','+(c.lat+d)+','+(c.lng+d)+','+(c.lat-d)}
+function mapRes(arr,near){
+ var seen={},out=[];
+ arr.forEach(function(r){
+  var name=r.name||String(r.display_name||'').split(',')[0];var lat=+r.lat,lng=+r.lon;
+  var k=name+'|'+lat.toFixed(4)+'|'+lng.toFixed(4);if(seen[k])return;seen[k]=1;
+  out.push({name:name,addr:addrFrom(r),lat:lat,lng:lng,d:near?dist(near.lat,near.lng,lat,lng):null});
+ });
+ if(near)out.sort(function(a,b){return a.d-b.d});
+ return out.slice(0,5);
+}
+async function searchPlaces(q,near){
+ var base={q:q,countrycodes:'kr',limit:10};
+ if(near){base.viewbox=vb(near,0.2);base.bounded=0}
+ var res=[];try{res=await nomi('search',base)}catch(e){}
+ if(res.length)return mapRes(res,near);
+ var parts=q.trim().split(/\s+/);
+ if(parts.length>1){
+  var area=null;try{area=(await nomi('search',{q:parts[0],countrycodes:'kr',limit:1}))[0]}catch(e){}
+  if(area){
+   var c={lat:+area.lat,lng:+area.lon},rest=parts.slice(1).join(' ');
+   try{res=await nomi('search',{q:rest,countrycodes:'kr',limit:10,viewbox:vb(c,0.1),bounded:1})}catch(e){}
+   if(res.length)return mapRes(res,near||c);
+   return [{name:rest,addr:parts[0]+' (동네 중심)',lat:c.lat,lng:c.lng,d:near?dist(near.lat,near.lng,c.lat,c.lng):null,approx:true}];
+  }
+ }
+ return [];
+}
+
+/* ---------- photo helpers ---------- */
+function exifGps(buf){
+ try{
+  var v=new DataView(buf);if(v.getUint16(0)!==0xFFD8)return null;var o=2;
+  while(o<v.byteLength-4){
+   var m=v.getUint16(o),len=v.getUint16(o+2);
+   if(m===0xFFE1&&v.getUint32(o+4)===0x45786966)return tiff(v,o+10);
+   if((m&0xFF00)!==0xFF00)break;o+=2+len;
+  }
+ }catch(e){}
+ return null;
+}
+function tiff(v,s){
+ var le=v.getUint16(s)===0x4949;
+ var g16=function(o){return v.getUint16(o,le)},g32=function(o){return v.getUint32(o,le)};
+ var ifd=s+g32(s+4),n=g16(ifd),gps=0,i;
+ for(i=0;i<n;i++){var e=ifd+2+i*12;if(g16(e)===0x8825)gps=s+g32(e+8)}
+ if(!gps)return null;
+ var m=g16(gps),lat,lng,lr='N',nr='E';
+ var rat=function(e){var a=s+g32(e+8);return g32(a)/g32(a+4)+g32(a+8)/g32(a+12)/60+g32(a+16)/g32(a+20)/3600};
+ for(i=0;i<m;i++){var x=gps+2+i*12,t=g16(x);
+  if(t===1)lr=String.fromCharCode(v.getUint8(x+8));
+  if(t===2)lat=rat(x);
+  if(t===3)nr=String.fromCharCode(v.getUint8(x+8));
+  if(t===4)lng=rat(x);}
+ if(lat==null||lng==null||isNaN(lat)||isNaN(lng))return null;
+ return {lat:lr==='S'?-lat:lat,lng:nr==='W'?-lng:lng};
+}
+function loadImg(file){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){res(im)};im.onerror=rej;im.src=u})}
+function shrink(img,w){var sc=Math.min(1,w/img.width),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.68)}
+async function takeFile(file,src){
+ if(!file)return;
+ try{
+  var gps=null;
+  if(src==='album'){try{gps=exifGps(await file.arrayBuffer())}catch(e){}}
+  var img=await loadImg(file);
+  S.photo=shrink(img,640);S.src=src;
+  S.photoGps=src==='album'?gps:S.pos;
+  S.photoAddr='';
+  S.photoLabel=src==='album'?(file.lastModified?dateLabel(file.lastModified)+' 사진':'앨범 사진'):'방금 촬영';
+  S.fillId=null;go('photo');
+ }catch(e){toast('사진을 불러오지 못했어요')}
+}
+
+/* ---------- camera ---------- */
+function stopCam(){if(S.stream){S.stream.getTracks().forEach(function(t){t.stop()});S.stream=null}}
+function camFail(m){var e=$('#vfmsg');if(!e)return;e.hidden=false;e.innerHTML=esc(m)+'<br><label for="fCam">사진 앱으로 찍기</label>'}
+async function startCam(){
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){camFail('이 브라우저에서는 카메라를 바로 열 수 없어요.');return}
+ try{
+  var st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+  var v=$('#vid');if(!v||S.screen!=='save'){st.getTracks().forEach(function(t){t.stop()});return}
+  S.stream=st;v.srcObject=st;try{await v.play()}catch(e){}
+ }catch(e){camFail('카메라 권한을 허용해 주세요. 주소창 옆 자물쇠에서 바꿀 수 있어요.')}
+}
+function shoot(){
+ var v=$('#vid');
+ if(!S.stream||!v||!v.videoWidth){$('#fCam').click();return}
+ var vr=$('#vf').getBoundingClientRect(),fr=$('#frame').getBoundingClientRect();
+ var sc=Math.max(vr.width/v.videoWidth,vr.height/v.videoHeight);
+ var ox=(v.videoWidth*sc-vr.width)/2,oy=(v.videoHeight*sc-vr.height)/2;
+ var sx=Math.max(0,(fr.left-vr.left+ox)/sc),sy=Math.max(0,(fr.top-vr.top+oy)/sc),sw=Math.min(v.videoWidth-sx,fr.width/sc),sh=Math.min(v.videoHeight-sy,fr.height/sc);
+ var c=document.createElement('canvas');c.width=800;c.height=Math.round(800*sh/sw);
+ c.getContext('2d').drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);
+ S.photo=c.toDataURL('image/jpeg',.7);S.src='camera';S.photoGps=S.pos;S.photoAddr='';S.photoLabel='방금 촬영';S.fillId=null;
+ go('photo');
+}
+
+/* ---------- navigation ---------- */
+function killMap(){if(S.map){try{S.map.remove()}catch(e){}S.map=null;S.mk=[]}}
+function go(sc,opt){
+ opt=opt||{};stopCam();killMap();
+ if(opt.reset){S.stack=[]}else{S.stack.push(S.screen);try{history.pushState({},'')}catch(e){}}
+ S.screen=sc;render();
+}
+window.addEventListener('popstate',function(){stopCam();killMap();S.screen=S.stack.pop()||'home';render()});
+try{history.replaceState({},'')}catch(e){}
+
+/* ---------- views ---------- */
+function back(){return '<button class="back" data-act="back" aria-label="뒤로">‹</button>'}
+function vHome(){
+ var n=places.length;
+ return '<div class="scr pad"><div class="edge"></div>'+
+ '<div class="h1" style="font-size:40px;letter-spacing:-0.05em">나의<br>맛집 다이어리</div>'+
+ '<div class="sub" style="font-size:12px">'+today()+'</div><div class="rule"></div>'+
+ '<button class="memo dark" data-act="goSave"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span class="eyebrow">SAVE</span><svg class="ic" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div><div><b>저장하기</b><span class="d">찍거나, 쓰거나, 사진을 올려요</span></div></button>'+
+ '<button class="memo card" data-act="goFind"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span class="eyebrow">PULL OUT</span><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg></div><div><b>꺼내기</b><span class="d">저장한 '+n+'곳 | 내 주변부터</span></div></button></div>';
+}
+function vSave(){
+ return '<div class="scr"><div class="edge"></div>'+
+ '<div class="top"><div>'+back()+'<div class="eyebrow">SAVE / PLACE / DIARY</div><div class="h1">저장하기</div></div><div class="sub" id="loc">'+esc(S.posLabel)+'</div></div>'+
+ '<div class="vf" id="vf"><video id="vid" playsinline muted autoplay></video><div class="frame" id="frame"><i></i><i></i><i></i><i></i></div><div class="vfmsg" id="vfmsg" hidden></div>'+
+ '<div class="vfbar"><button class="alb" data-act="album"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg>앨범</button><button class="shut" data-act="shoot" aria-label="촬영"><i></i></button></div></div>'+
+ '<div class="field"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="qName" value="'+esc(S.query)+'" placeholder="가게 이름 (동네와 같이 적어도 돼요)" autocomplete="off" enterkeyhint="search"></div>'+
+ '<button class="btn" data-act="find" id="goBtn">찾기</button></div>';
+}
+function locCard(){
+ var t,s;
+ if(S.photoGps){t=S.src==='camera'?'현재 위치를 함께 저장해요':'사진에서 위치를 찾았어요';s=S.photoAddr||'주소를 확인하는 중…'}
+ else{t='사진에 위치 정보가 없어요';s='동네와 같이 적어 주세요. 예) 가정동 접시고기'}
+ return '<div class="card" style="padding:14px 16px;display:flex;flex-direction:column;gap:2px"><div style="font-size:14px;font-weight:700">'+t+'</div><div class="sub" id="locSub">'+esc(s)+'</div></div>';
+}
+function vPhoto(){
+ return '<div class="scr"><div class="edge"></div>'+back()+
+ '<div class="h1" style="font-size:28px">이 가게를 저장해요</div>'+
+ '<div class="ph'+(S.src==='camera'?' wide':'')+'" style="background-image:url('+S.photo+')"><em>'+esc(S.photoLabel)+'</em></div>'+
+ locCard()+
+ '<div class="field"><input id="qName" value="'+esc(S.query)+'" placeholder="가게 이름" autocomplete="off" enterkeyhint="search"></div>'+
+ '<div class="sub" style="font-size:12px;padding:0 2px">위치가 없는 사진이면 "가정동 접시고기"처럼 동네와 같이 적어요.</div>'+
+ '<div class="grow"></div>'+
+ '<button class="btn" data-act="find" id="goBtn">찾기</button>'+
+ (S.photoGps?'<button class="link" data-act="saveHere">이름은 나중에 · 위치만 저장</button>':'')+'</div>';
+}
+function vFill(){
+ var p=byId(S.fillId)||{};
+ return '<div class="scr"><div class="edge"></div>'+back()+
+ '<div><div class="eyebrow">FILL / ADDRESS</div><div class="h1">위치를 찾아요</div></div>'+
+ '<div class="card" style="padding:14px 16px"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(p.addr||'위치 정보 없음')+'</div></div>'+
+ '<div class="field"><input id="qName" value="'+esc(S.query)+'" placeholder="동네와 이름 (예: 가정동 접시고기)" autocomplete="off" enterkeyhint="search"></div>'+
+ '<div class="grow"></div><button class="btn" data-act="find" id="goBtn">찾기</button></div>';
+}
+function vConfirm(){
+ var rows=S.cands.map(function(c,i){return '<button class="row'+(i===S.sel?' sel':'')+'" data-act="pick" data-i="'+i+'"><div class="th">'+ini(c.name)+'</div><div class="mid"><div class="nm">'+esc(c.name)+'</div><div class="meta">'+esc(cat(c.name))+' · '+esc(c.addr)+'</div></div><div class="rt'+(i?' g':'')+'">'+fmt(c.d)+'</div></button>'}).join('');
+ var ref=S.photoGps||S.pos,hasMap=ref||S.cands.length;
+ var none=!S.cands.length?'<div class="empty">찾지 못했어요.<br>동네를 같이 적으면 더 잘 찾아요.</div>':'';
+ var alt=(S.photoGps||S.pos)?'여기 없어요 · 현재 위치 주소로 저장':'여기 없어요 · 이름만 저장';
+ return '<div class="scr"><div class="edge"></div>'+back()+
+ '<div class="top"><div><div class="eyebrow">CHECK / PLACE</div><div class="h1">여기 맞아요?</div></div><div class="sub">"'+esc(S.query)+'"</div></div>'+
+ rows+none+
+ (hasMap?'<div class="mapbox"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.src==='album'?'사진 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
+ '<div class="two" style="flex:none"><div class="field" style="flex:1;font-size:14px"><input id="qMemo" value="'+esc(S.memo)+'" placeholder="메모 (선택)"></div>'+(S.cands.length?'<button class="btn" style="width:110px;flex:none" data-act="confirmSave">저장</button>':'')+'</div>'+
+ '<button class="link" data-act="saveHere">'+alt+'</button></div>';
+}
+function vFind(){
+ return '<div class="fwrap"><div id="fmap"></div>'+
+ '<div class="fsearch"><div class="field" style="height:50px"><input id="qFind" value="'+esc(S.q)+'" placeholder="이름·동네·메모 검색" autocomplete="off"></div>'+
+ '<div class="chips" id="chips"></div></div>'+
+ '<div class="sheet"><div class="grab"></div><div class="sh"><b>가까운 맛집</b><span class="sub" id="cnt"></span></div><div class="list grow" id="plist"></div>'+
+ '<div class="tabs"><button data-act="goSave">저장</button><button class="on">꺼내기</button></div></div></div>';
+}
+function vDetail(){
+ var p=byId(S.openId);if(!p)return vHome();
+ var d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null;
+ var spec=function(k,v){return '<div class="r"><div class="k">'+k+'</div><div class="v"></div><div>'+v+'</div></div>'};
+ var srcL={camera:'촬영',album:'앨범 사진',name:'이름 입력',remote:'이름 입력',sheet:'시트에서 가져옴'}[p.src]||'';
+ return '<div class="scr"><div class="edge"></div>'+back()+
+ (p.photo?'<div class="ph" style="background-image:url('+p.photo+')"><em>저장할 때 찍은 사진</em></div>':'')+
+ '<div><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><div class="h1" style="font-size:32px">'+esc(p.name)+'</div></div>'+
+ (p.needsAddr?'<div class="warn"><span>위치가 아직 없어요</span><button data-act="fill">주소 채우기</button></div>':'')+
+ '<div class="spec">'+spec('주 소',esc(p.addr||'-'))+
+ '<div class="r"><div class="k">메 모</div><div class="v"></div><textarea id="memoEd" rows="2" placeholder="메모를 남겨요">'+esc(p.memo||'')+'</textarea></div>'+
+ spec('저 장',dateLabel(p.createdAt)+' | '+srcL)+(d!=null?spec('거 리',fmt(d)):'')+'</div>'+
+ '<div class="grow"></div>'+
+ '<button class="btn" data-act="showMap">지도에서 보기</button>'+
+ '<div class="two"><button class="btn line" data-act="copy">주소 복사</button><button class="btn line" data-act="visit">'+(p.visited?'다녀왔어요 ✓':'다녀왔어요')+'</button></div>'+
+ '<button class="link" data-act="del">삭제</button></div>';
+}
+var VIEWS={home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail};
+
+/* ---------- maps ---------- */
+function mkMap(id,center,zoom){
+ var m=L.map(id,{zoomControl:false,attributionControl:true}).setView(center,zoom||15);
+ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(m);
+ m.attributionControl.setPrefix(false);
+ return m;
+}
+function pin(n,cls){return L.divIcon({className:'',html:'<div class="pn '+(cls||'')+'">'+(n==null?'':n)+'</div>',iconSize:[28,28],iconAnchor:[14,14]})}
+var meIcon=function(){return L.divIcon({className:'',html:'<div class="me"></div>',iconSize:[14,14],iconAnchor:[7,7]})};
+function confirmMap(){
+ var el=$('#cmap');if(!el||typeof L==='undefined')return;
+ var ref=S.photoGps||S.pos,c=S.cands[S.sel],ctr=c?[c.lat,c.lng]:ref?[ref.lat,ref.lng]:[37.5665,126.978];
+ S.map=mkMap('cmap',ctr,16);
+ updateConfirmMap(true);
+}
+function updateConfirmMap(fit){
+ if(!S.map)return;
+ S.mk.forEach(function(m){S.map.removeLayer(m)});S.mk=[];
+ var pts=[],ref=S.photoGps||S.pos;
+ S.cands.forEach(function(c,i){S.mk.push(L.marker([c.lat,c.lng],{icon:pin(i+1,i===S.sel?'on':'sm'),zIndexOffset:i===S.sel?500:0}).addTo(S.map).on('click',function(){S.sel=i;syncConfirm()}));pts.push([c.lat,c.lng])});
+ if(ref){S.mk.push(L.marker([ref.lat,ref.lng],{icon:meIcon(),interactive:false}).addTo(S.map));pts.push([ref.lat,ref.lng])}
+ if(fit&&pts.length>1)S.map.fitBounds(pts,{padding:[34,34],maxZoom:17});
+ else if(S.cands[S.sel])S.map.panTo([S.cands[S.sel].lat,S.cands[S.sel].lng]);
+ setTimeout(function(){S.map&&S.map.invalidateSize()},50);
+}
+function syncConfirm(){
+ document.querySelectorAll('.row[data-act=pick]').forEach(function(r,i){r.classList.toggle('sel',i===S.sel)});
+ updateConfirmMap(false);
+}
+function listData(){
+ var a=places.slice(),q=S.q.trim().toLowerCase();
+ if(q)a=a.filter(function(p){return (p.name+' '+(p.addr||'')+' '+(p.memo||'')).toLowerCase().indexOf(q)>=0});
+ if(S.chip==='unvisited')a=a.filter(function(p){return !p.visited});
+ a.forEach(function(p){p._d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null});
+ if(S.chip==='recent')a.sort(function(x,y){return y.createdAt-x.createdAt});
+ else a.sort(function(x,y){return ((x._d==null?1e12:x._d)-(y._d==null?1e12:y._d))||(y.createdAt-x.createdAt)});
+ return a;
+}
+function refreshFind(fit){
+ var a=listData();
+ $('#chips').innerHTML=[['near','내 주변'],['recent','최근 저장'],['unvisited','안 가본 곳']].map(function(c){return '<button class="chip'+(S.chip===c[0]?' on':'')+'" data-act="chip" data-c="'+c[0]+'">'+c[1]+'</button>'}).join('');
+ $('#cnt').textContent=a.length+'곳';
+ $('#plist').innerHTML=a.length?a.map(function(p){
+  var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
+  var rt=p._d!=null?'<div class="rt">'+fmt(p._d)+'</div>':'<div class="rt g" style="font-size:12px">위치 없음</div>';
+  return '<button class="row'+(S.hl===p.id?' sel':'')+'" data-act="open" data-id="'+p.id+'" id="r_'+p.id+'">'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div></div><div style="text-align:right">'+rt+(p.visited?'<span class="stamp">다녀옴</span>':'')+'</div></button>';
+ }).join(''):'<div class="empty">'+(places.length?'찾는 곳이 없어요.':'아직 저장한 곳이 없어요.<br>길에서 발견하면 저장하기를 눌러요.')+'</div>';
+ if(!S.map)return;
+ S.mk.forEach(function(m){S.map.removeLayer(m)});S.mk=[];
+ var pts=[];
+ a.forEach(function(p){if(p.lat==null)return;pts.push([p.lat,p.lng]);
+  S.mk.push(L.marker([p.lat,p.lng],{icon:pin('',S.hl===p.id?'on':'sm')}).addTo(S.map).on('click',function(){S.hl=p.id;refreshFind(false);var r=$('#r_'+p.id);if(r)r.scrollIntoView({block:'nearest'})}))});
+ if(S.pos){S.mk.push(L.marker([S.pos.lat,S.pos.lng],{icon:meIcon(),interactive:false}).addTo(S.map));}
+ if(fit){
+  if(S.focusId){var f=byId(S.focusId);if(f&&f.lat!=null)S.map.setView([f.lat,f.lng],17);S.focusId=null}
+  else{var all=pts.slice();if(S.pos)all.push([S.pos.lat,S.pos.lng]);
+   if(S.pos){var near=a.filter(function(p){return p._d!=null}).slice(0,3).map(function(p){return [p.lat,p.lng]}).concat([[S.pos.lat,S.pos.lng]]);near.length>1?S.map.fitBounds(near,{paddingTopLeft:[30,120],paddingBottomRight:[30,30],maxZoom:16}):S.map.setView([S.pos.lat,S.pos.lng],15)}
+   else if(all.length>1)S.map.fitBounds(all,{paddingTopLeft:[30,120],paddingBottomRight:[30,30],maxZoom:16});
+   else if(all.length===1)S.map.setView(all[0],16);}
+ }
+}
+function afterFind(){
+ var ctr=S.pos?[S.pos.lat,S.pos.lng]:[37.5665,126.978];
+ if(typeof L!=='undefined'){S.map=mkMap('fmap',ctr,14)}
+ refreshFind(true);
+ setTimeout(function(){S.map&&S.map.invalidateSize()},80);
+ if(!S.pos)locate().then(function(p){if(p&&S.screen==='find'){refreshFind(true)}});
+}
+
+/* ---------- render ---------- */
+function render(){
+ var v=VIEWS[S.screen]||vHome;app.innerHTML=v();
+ if(S.screen==='save'){startCam();if(!S.pos)locate().then(function(){var e=$('#loc');if(e)e.textContent=S.posLabel})}
+ if(S.screen==='photo'&&S.photoGps&&!S.photoAddr){var g=S.photoGps;rev(g.lat,g.lng).then(function(r){S.photoAddr=r?r.addr:'주소를 확인하지 못했어요';var e=$('#locSub');if(e)e.textContent=S.photoAddr})}
+ if(S.screen==='confirm')confirmMap();
+ if(S.screen==='find')afterFind();
+}
+
+/* ---------- actions ---------- */
+async function doFind(){
+ var q=(S.query||'').trim();
+ if(!q){toast('가게 이름을 적어 주세요');var i=$('#qName');if(i)i.focus();return}
+ var b=$('#goBtn');if(b){b.disabled=true;b.innerHTML='<span class="spin"></span>찾는 중'}
+ var near=S.photoGps||S.pos;
+ if(!near&&S.screen==='save')near=await locate();
+ try{S.cands=await searchPlaces(q,near)}catch(e){S.cands=[]}
+ S.sel=0;S.memo=S.memo||'';go('confirm');
+}
+function addPlace(o){var p=Object.assign({id:uid(),name:'',addr:'',lat:null,lng:null,memo:'',src:'name',photo:null,visited:false,createdAt:Date.now(),needsAddr:false},o);places.unshift(p);persist();return p}
+function finishSave(msg){S.query='';S.memo='';S.photo=null;S.photoGps=null;S.cands=[];S.fillId=null;toast(msg||'저장했어요');go('home',{reset:true})}
+function confirmSave(){
+ var c=S.cands[S.sel];if(!c)return;
+ if(S.fillId){var p=byId(S.fillId);if(p){p.lat=c.lat;p.lng=c.lng;p.addr=c.addr;p.needsAddr=false;if(S.memo)p.memo=S.memo;if(!p.photo&&S.photo)p.photo=S.photo;persist()}
+  var id=S.fillId;S.query='';S.memo='';S.cands=[];S.fillId=null;toast('위치를 채웠어요');S.openId=id;S.stack=['home'];S.screen='detail';render();return}
+ addPlace({name:c.name,addr:c.addr,lat:c.lat,lng:c.lng,memo:S.memo,src:S.src,photo:S.photo});
+ finishSave();
+}
+async function saveHere(){
+ var g=S.photoGps||S.pos;
+ if(S.fillId){toast('이름과 동네를 다시 적어 주세요');return}
+ var name=(S.query||'').trim()||'이름 미정 '+dateLabel(Date.now());
+ if(!g&&!(S.query||'').trim()){toast('이름을 적어 주세요');return}
+ var addr='',lat=null,lng=null;
+ if(g){lat=g.lat;lng=g.lng;var r=await rev(lat,lng);addr=r?r.addr:''}
+ addPlace({name:name,addr:addr,lat:lat,lng:lng,memo:S.memo,src:S.src,photo:S.photo,needsAddr:!g});
+ finishSave(g?'현재 위치로 저장했어요':'이름만 저장했어요. 나중에 위치를 채워요');
+}
+document.addEventListener('click',function(e){
+ var t=e.target.closest('[data-act]');if(!t)return;
+ var a=t.getAttribute('data-act'),id=t.getAttribute('data-id');
+ switch(a){
+  case 'back':history.back();break;
+  case 'goSave':if(S.screen==='find'){stopCam();killMap();S.screen='save';S.stack=['home'];render()}else{S.query='';S.fillId=null;go('save')}break;
+  case 'goFind':S.q='';S.chip='near';S.hl=null;go('find');break;
+  case 'album':$('#fAlb').click();break;
+  case 'shoot':shoot();break;
+  case 'find':doFind();break;
+  case 'pick':S.sel=+t.getAttribute('data-i');syncConfirm();break;
+  case 'confirmSave':confirmSave();break;
+  case 'saveHere':saveHere();break;
+  case 'chip':S.chip=t.getAttribute('data-c');refreshFind(false);break;
+  case 'open':S.openId=id;S.hl=id;go('detail');break;
+  case 'fill':var p=byId(S.openId);S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
+  case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';go('find');break;
+  case 'copy':var c=byId(S.openId);copy(c.addr||c.name);break;
+  case 'visit':var v=byId(S.openId);v.visited=!v.visited;persist();render();break;
+  case 'del':if(confirm('이 맛집을 삭제할까요?')){places=places.filter(function(x){return x.id!==S.openId});persist();history.back()}break;
+ }
+});
+document.addEventListener('input',function(e){
+ var i=e.target.id;
+ if(i==='qName')S.query=e.target.value;
+ else if(i==='qMemo')S.memo=e.target.value;
+ else if(i==='qFind'){S.q=e.target.value;refreshFind(false)}
+});
+document.addEventListener('change',function(e){
+ if(e.target.id==='memoEd'){var p=byId(S.openId);if(p){p.memo=e.target.value;persist()}}
+});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id==='qName'){e.preventDefault();e.target.blur();doFind()}});
+$('#fCam').addEventListener('change',function(e){var f=e.target.files[0];e.target.value='';takeFile(f,'camera')});
+$('#fAlb').addEventListener('change',function(e){var f=e.target.files[0];e.target.value='';takeFile(f,'album')});
+document.addEventListener('visibilitychange',function(){if(document.hidden)stopCam();else if(S.screen==='save'&&!S.stream)startCam()});
+
+/* ---------- 기존 시트 가져오기 (1회) ---------- */
+async function maybeImport(){
+ try{if(localStorage.getItem(IMPORT_KEY))return}catch(e){return}
+ try{
+  var r=await fetch(APPS_SCRIPT_URL);if(!r.ok)return;var j=await r.json();
+  var rows=Array.isArray(j)?j:(j.rows||j.data||j.places||[]);var n=0,now=Date.now();
+  rows.forEach(function(row,i){
+   var name=String(row['이름']||row.name||'').trim();if(!name)return;
+   if(places.some(function(p){return p.name===name}))return;
+   places.push({id:uid(),name:name,addr:String(row['지역']||row.region||'').trim(),lat:null,lng:null,memo:String(row['이유']||row.reason||'').trim(),src:'sheet',photo:null,visited:false,createdAt:now-i*1000,needsAddr:true});n++;
+  });
+  persist();try{localStorage.setItem(IMPORT_KEY,'1')}catch(e){}
+  if(n){toast('시트에서 '+n+'곳을 가져왔어요');if(S.screen==='home')render()}
+ }catch(e){}
+}
+render();maybeImport();
+})();
+</script>
+</body>
+</html>
