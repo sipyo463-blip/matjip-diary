@@ -79,10 +79,11 @@ function imgThumb_(q) {
   return out_({ error: 'no image' });
 }
 
-// 간판 사진 → 가게 이름 (POST, 스크립트 속성 ANTHROPIC_KEY 필요)
+// 간판 사진 → 가게 이름 / 오늘의 추천 (POST, 스크립트 속성 ANTHROPIC_KEY 필요)
 function doPost(e) {
   try {
     var b = JSON.parse(e.postData.contents || '{}');
+    if (b.pick) return out_(pick_(b.pick));
     var m = String(b.ocr || '').match(/^data:(image\/[a-z+]+);base64,(.+)$/);
     if (!m) return out_({ error: 'bad image' });
     var k = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_KEY');
@@ -92,6 +93,45 @@ function doPost(e) {
     if (a.error) return out_({ error: a.error });
     return out_({ name: a.name || '', raw: a.raw, model: 'haiku' });
   } catch (err) { return out_({ error: 'ocr failed' }); }
+}
+
+// 오늘의 추천: 후보 목록 + 취향(맛/배고픔/기분/날씨)을 Haiku에 보내 하나를 고르게 함
+function pick_(p) {
+  var k = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_KEY');
+  if (!k) return { error: 'missing ANTHROPIC_KEY' };
+  var cands = p.cands || [];
+  if (!cands.length) return { error: 'no candidates' };
+  var excl = p.exclude || [];
+  var pool = cands.filter(function (c) { return excl.indexOf(c.id) === -1; });
+  if (!pool.length) pool = cands;
+  var lines = pool.map(function (c) {
+    return c.id + ' | ' + c.name + ' | ' + (c.cat || '') + ' | ' + (c.dist != null ? Math.round(c.dist) + 'm' : '');
+  }).join('\n');
+  var q = '아래는 사용자 근처에 저장된 맛집 후보 목록입니다 (형식: id | 가게이름 | 종류 | 거리).\n' + lines +
+    '\n\n사용자 취향:\n- 오늘 먹고 싶은 맛: ' + (p.taste || '상관없음') +
+    '\n- 배고픈 정도: ' + (p.hunger || '보통') +
+    '\n- 오늘 기분: ' + (p.feel || '보통') +
+    (p.weather ? '\n- 현재 날씨: ' + p.weather : '') +
+    '\n\n위 취향에 가장 잘 맞는 곳을 후보 중 하나만 골라서, 정확히 아래 두 줄 형식으로만 답하세요(다른 말 금지):\n' +
+    'ID: <고른 id>\nREASON: <왜 어울리는지 한 문장, 20자 내외, 친근한 반말 금지, 존댓말>';
+  var body = {
+    model: 'claude-haiku-5-5', max_tokens: 200,
+    messages: [{ role: 'user', content: [{ type: 'text', text: q }] }]
+  };
+  var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+    method: 'post', contentType: 'application/json',
+    headers: { 'x-api-key': k, 'anthropic-version': '2023-06-01' },
+    payload: JSON.stringify(body), muteHttpExceptions: true
+  });
+  if (r.getResponseCode() !== 200) return { error: 'api ' + r.getResponseCode() };
+  var cs = JSON.parse(r.getContentText()).content || [];
+  var raw = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
+  var idm = raw.match(/ID:\s*([^\n\r]+)/i);
+  var rem = raw.match(/REASON:\s*([^\n\r]+)/i);
+  var id = idm ? idm[1].replace(/[*"'`]/g, '').trim() : '';
+  var found = pool.some(function (c) { return String(c.id) === id; });
+  if (!found) id = pool[0].id;
+  return { id: id, reason: rem ? rem[1].trim() : '' };
 }
 
 function sign_(model, k, m) {
