@@ -99,7 +99,8 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .pn.sm{width:22px;height:22px}
 .me{width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:0 0 0 7px rgba(62,53,43,.14)}
 .melab{position:absolute;left:10px;top:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
-.locbtn{position:absolute;right:12px;width:42px;height:42px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(62,53,43,.22);z-index:600;color:var(--ink)}
+.mapctrls{position:absolute;right:12px;bottom:calc(46% + 12px);z-index:600;display:flex;flex-direction:column;gap:10px}
+.locbtn{width:42px;height:42px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(62,53,43,.22);color:var(--ink)}
 .locbtn .ic{width:20px;height:20px}
 
 #fmap.nv img,#cmap.nv img{filter:sepia(.28) saturate(.8)}
@@ -375,6 +376,13 @@ async function myLoc(){
  var p=await locate();if(!p){toast('위치를 확인할 수 없어요');return}
  if(S.map&&S.screen==='find')mView(S.map,p.lat,p.lng,16);
 }
+function fitAll(){
+ var M=S.map;if(!M)return;
+ var pts=(S.findPts||[]).slice();
+ if(S.pos)pts.push([S.pos.lat,S.pos.lng]);
+ if(!pts.length){toast('표시할 장소가 없어요');return}
+ mFit(M,pts,[50,40,40,40],17);
+}
 function pickChips(list,act,cur){
  return list.map(function(m,i){return '<button class="memo card" data-act="'+act+'" data-i="'+i+'" style="min-height:56px'+(cur===i?';border-color:var(--ink)':'')+'"><div class="mt"><b style="font-size:17px">'+esc(m)+'</b></div></button>'}).join('')
 }
@@ -490,8 +498,11 @@ function vFind(){
  return '<div class="fwrap"><div id="fmap"></div>'+
  '<div class="fsearch"><div class="field" style="height:50px"><input id="qFind" value="'+esc(S.q)+'" placeholder="이름·동네·메모 검색" autocomplete="off"></div>'+
  '<div class="chips" id="chips"></div></div>'+
+ '<div class="mapctrls">'+
+ '<button class="locbtn" data-act="fitAll" title="전체보기"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 0 1-1v-4"/></svg></button>'+
+ '<button class="locbtn" data-act="myLoc" title="내 위치"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
+ '</div>'+
  '<div class="sheet"><div class="grab"></div><div class="sh"><b>가까운 맛집</b><span class="sub" id="cnt"></span></div><div class="list grow" id="plist"></div>'+
- '<button class="locbtn" data-act="myLoc" style="bottom:calc(46% + 14px)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
  '<div class="tabs"><button data-act="goSave">저장</button><button class="on">꺼내기</button></div></div></div>';
 }
 function vDetail(){
@@ -622,6 +633,7 @@ function refreshFind(fit){
   var on=S.hl===p.id;
   S.mk.push(mAdd(M,p.lat,p.lng,pinHtml('',on?'on':'sm'),on?28:22,function(){S.hl=p.id;refreshFind(false);var r=$('#r_'+p.id);if(r)r.scrollIntoView({block:'nearest'})},on?500:0));
  });
+ S.findPts=pts.slice();
  if(S.pos)S.mk.push(mAdd(M,S.pos.lat,S.pos.lng,ME,14,null,0));
  if(fit){
   if(S.focusId){var f=byId(S.focusId);if(f&&f.lat!=null)mView(M,f.lat,f.lng,17);S.focusId=null}
@@ -819,6 +831,7 @@ document.addEventListener('click',function(e){
   case 'eSave':eSave();break;
   case 'pinOk':pinOk();break;
   case 'myLoc':myLoc();break;
+  case 'fitAll':fitAll();break;
   case 'fill':var p=byId(S.openId);S.editMode=false;S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
   case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';go('find');break;
   case 'copy':var c=byId(S.openId);copy(c.addr||c.name);break;
