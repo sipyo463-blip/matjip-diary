@@ -441,7 +441,7 @@ function vPin(){
  '<div class="sub" id="pinAddr" style="flex:none;min-height:36px">지도를 움직여 가게 위치에 동그라미를 맞춰 주세요</div>'+
  '<button class="btn" data-act="pinOk">이 위치로 정하기</button></div>';
 }
-var VIEWS={home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin};
+var VIEWS={home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin,review:vReview};
 
 /* ---------- maps (네이버 지도 → 없으면 OpenStreetMap) ---------- */
 function mkMap(id,center,zoom){
@@ -572,11 +572,11 @@ function finishSave(msg){S.query='';S.memo='';S.photo=null;S.photoGps=null;S.can
 async function confirmSave(){
  var c=S.cands[S.sel];if(!c)return;
  if(S.editMode&&S.draft){var d=S.draft;d.addr=c.addr;d.lat=c.lat;d.lng=c.lng;d.q=c.name;d.loc=true;S.editMode=false;S.fillId=null;S.cands=[];toast('위치를 골랐어요. 저장을 눌러 확정해요');history.back();return}
- if(S.fillId){var p=byId(S.fillId);if(p){p.lat=c.lat;p.lng=c.lng;p.addr=c.addr;p.needsAddr=false;if(S.memo)p.memo=S.memo;if(!p.photo&&S.photo)p.photo=S.photo;persist();if(!p.photo){var tf=await foodThumb(p.name,c.addr);if(tf){p.photo=tf.img;p.thumb=tf.from;persist()}}}
-  var id=S.fillId;S.query='';S.memo='';S.cands=[];S.fillId=null;toast('위치를 채웠어요');S.openId=id;S.stack=['home'];S.screen='detail';render();return}
- var th=null;if(!S.photo){toast('음식점 사진을 찾는 중…');th=await foodThumb(c.name,c.addr)}
- addPlace({name:c.name,addr:c.addr,lat:c.lat,lng:c.lng,memo:S.memo,src:S.src,photo:S.photo||(th&&th.img)||null,thumb:(!S.photo&&th)?th.from:null});
- finishSave();
+ var fp=S.fillId?byId(S.fillId):null;
+ var rv={name:fp?fp.name:c.name,addr:c.addr,lat:c.lat,lng:c.lng,memo:S.memo||(fp&&fp.memo)||'',src:fp?fp.src:S.src,photo:S.photo||(fp&&fp.photo)||null,thumb:null,fillId:fp?fp.id:null,mine:!!S.photo};
+ if(fp&&fp.photo&&!S.photo)rv.thumb=fp.thumb||null;
+ if(!rv.photo){toast('음식점 사진을 찾는 중…');var th=await foodThumb(rv.name,rv.addr);if(th){rv.photo=th.img;rv.thumb=th.from}}
+ S.rv=rv;go('review');
 }
 async function saveHere(){
  var g=S.photoGps||S.pos;
@@ -585,9 +585,44 @@ async function saveHere(){
  if(!g&&!(S.query||'').trim()){toast('이름을 적어 주세요');return}
  var addr='',lat=null,lng=null;
  if(g){lat=g.lat;lng=g.lng;var r=await rev(lat,lng);addr=r?r.addr:''}
- var th2=null;if(!S.photo&&(S.query||'').trim())th2=await foodThumb(name,addr);
- addPlace({name:name,addr:addr,lat:lat,lng:lng,memo:S.memo,src:S.src,photo:S.photo||(th2&&th2.img)||null,thumb:(!S.photo&&th2)?th2.from:null,needsAddr:!g});
- finishSave(g?'현재 위치로 저장했어요':'이름만 저장했어요. 나중에 위치를 채워요');
+ var rv={name:name,addr:addr,lat:lat,lng:lng,memo:S.memo||'',src:S.src,photo:S.photo||null,thumb:null,fillId:null,mine:!!S.photo,noLoc:!g};
+ if(!rv.photo&&(S.query||'').trim()){toast('음식점 사진을 찾는 중…');var th=await foodThumb(name,addr);if(th){rv.photo=th.img;rv.thumb=th.from}}
+ S.rv=rv;go('review');
+}
+function vReview(){
+ var r=S.rv;if(!r)return vHome();
+ var cap=r.mine?'내가 고른 사진':r.thumb?'네이버 검색 사진 · 실제 매장과 다를 수 있어요':'';
+ var ph=r.photo?'<div class="ph" style="background-image:url('+r.photo+')"><em>'+cap+'</em></div>':'<div class="card" style="padding:18px 16px;text-align:center"><div class="sub">사진 없이 저장돼요</div></div>';
+ var pbtn=r.mine?'':'<div class="two">'+'<button class="btn line" data-act="rvPhoto">사진 다시 찾기</button>'+(r.photo?'<button class="btn line" data-act="rvNoPhoto">사진 빼기</button>':'')+'</div>';
+ return '<div class="scr" style="overflow-y:auto"><div class="edge"></div>'+back()+
+ '<div><div class="eyebrow">REVIEW / BEFORE SAVE</div><div class="h1" style="font-size:28px">이대로 저장할까요?</div></div>'+
+ ph+pbtn+
+ '<div class="spec">'+srow('이 름','<input id="rName" value="'+esc(r.name)+'" placeholder="가게 이름">')+
+ srow('주 소','<textarea id="rAddr" rows="2" placeholder="주소">'+esc(r.addr)+'</textarea>')+
+ srow('메 모','<textarea id="rMemo" rows="2" placeholder="메모 (선택)">'+esc(r.memo)+'</textarea>')+'</div>'+
+ (r.lat==null?'<div class="warn"><span>지도 위치가 없어요. 나중에 주소 채우기로 연결해요</span></div>':'')+
+ '<div class="grow"></div>'+
+ '<button class="btn" data-act="rvSave">저장</button>'+
+ '<button class="link" data-act="back">다시 고르기</button></div>';
+}
+function rvSave(){
+ var r=S.rv;if(!r)return;
+ var name=(r.name||'').trim();if(!name){toast('이름을 적어 주세요');return}
+ var addr=(r.addr||'').trim();
+ if(r.fillId){
+  var p=byId(r.fillId);
+  if(p){p.name=name;p.lat=r.lat;p.lng=r.lng;p.addr=addr;p.needsAddr=(r.lat==null);if(r.memo)p.memo=r.memo;p.photo=r.photo;p.thumb=r.thumb;persist()}
+  var id=r.fillId;S.rv=null;S.query='';S.memo='';S.cands=[];S.fillId=null;toast('위치를 채웠어요');S.openId=id;S.stack=['home'];S.screen='detail';render();return}
+ addPlace({name:name,addr:addr,lat:r.lat,lng:r.lng,memo:r.memo,src:r.src,photo:r.photo,thumb:r.thumb,needsAddr:(r.lat==null)});
+ var m=r.noLoc?'이름만 저장했어요. 나중에 위치를 채워요':'저장했어요';S.rv=null;
+ finishSave(m);
+}
+async function rvPhoto(){
+ var r=S.rv;if(!r)return;var n=(r.name||'').trim();if(!n)return;
+ toast('음식점 사진을 찾는 중…');
+ var th=await foodThumb(n,r.addr);
+ if(S.screen!=='review'||S.rv!==r)return;
+ if(th){r.photo=th.img;r.thumb=th.from;render()}else toast('사진을 찾지 못했어요');
 }
 /* ---------- 음식점 사진 썸네일 (사진 없이 저장할 때, 네이버 이미지 검색) ---------- */
 function dongOf(addr){var m=String(addr||'').match(/([가-힣0-9]+(?:동|읍|면|가))(?:\s|$)/);return m?m[1]:''}
@@ -666,6 +701,9 @@ document.addEventListener('click',function(e){
   case 'pick':S.sel=+t.getAttribute('data-i');syncConfirm();break;
   case 'confirmSave':confirmSave();break;
   case 'saveHere':saveHere();break;
+  case 'rvSave':rvSave();break;
+  case 'rvPhoto':rvPhoto();break;
+  case 'rvNoPhoto':if(S.rv){S.rv.photo=null;S.rv.thumb=null;render()}break;
   case 'chip':S.chip=t.getAttribute('data-c');refreshFind(false);break;
   case 'open':S.openId=id;S.hl=id;go('detail');break;
   case 'edit':var ep=byId(S.openId);if(!ep)break;S.draft={name:ep.name,addr:ep.addr||'',memo:ep.memo||'',lat:ep.lat,lng:ep.lng,q:ep.name,addr0:ep.addr||'',loc:false};go('edit');break;
@@ -685,6 +723,9 @@ document.addEventListener('input',function(e){
  var i=e.target.id;
  if(i==='qName')S.query=e.target.value;
  else if(i==='qMemo')S.memo=e.target.value;
+ else if(i==='rName'&&S.rv)S.rv.name=e.target.value;
+ else if(i==='rAddr'&&S.rv)S.rv.addr=e.target.value;
+ else if(i==='rMemo'&&S.rv)S.rv.memo=e.target.value;
  else if(i==='eName'&&S.draft)S.draft.name=e.target.value;
  else if(i==='eAddr'&&S.draft){S.draft.addr=e.target.value}
  else if(i==='eMemo'&&S.draft)S.draft.memo=e.target.value;
