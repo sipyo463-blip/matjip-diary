@@ -43,12 +43,13 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .grow{flex:1;min-height:0}
 
 /* home */
-.memo{flex:1;border-radius:14px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;width:100%}
-.memo .ic{width:24px;height:24px}
+.memo{flex:none;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;text-align:left;width:100%;min-height:72px}
+.memo .ic{width:22px;height:22px;flex:none}
+.memo .mt{flex:1;min-width:0}
 .memo.dark{background:var(--ink);color:var(--paper)}
 .memo.dark .eyebrow{color:#A89A82}
-.memo b{display:block;font-size:28px;font-weight:800;letter-spacing:-0.05em}
-.memo span.d{display:block;font-size:13px;margin-top:4px;color:var(--sub)}
+.memo b{display:block;font-size:19px;font-weight:800;letter-spacing:-0.04em}
+.memo span.d{display:block;font-size:12px;margin-top:2px;color:var(--sub)}
 .memo.dark span.d{color:rgba(235,227,208,.62)}
 .rule{border-top:1px solid var(--line);margin:8px 0 6px}
 
@@ -307,6 +308,75 @@ async function readSign(dataUrl){
  return '';
 }
 
+/* ---------- 추천하기 ---------- */
+var MOODS=[['든든하게',['고기집','국물','치킨']],['칼칼하게',['국물','분식']],['가볍게',['브런치','카페','일식']],['달달하게',['카페']]];
+async function fetchWeather(lat,lng){
+ try{var r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lng+'&current=temperature_2m,weather_code&timezone=auto');var j=await r.json();var c=j.current||{};return {temp:c.temperature_2m,code:c.weather_code}}catch(e){return null}
+}
+function wxDesc(code){
+ if(code==null)return '';
+ if(code>=95)return '천둥번개가 쳐요';
+ if((code>=71&&code<=77)||(code>=85&&code<=86))return '눈이 와요';
+ if((code>=51&&code<=67)||(code>=80&&code<=82))return '비가 와요';
+ if(code===45||code===48)return '안개가 꼈어요';
+ if(code<=1)return '맑아요';
+ return '흐려요'
+}
+function wxCats(w){
+ var c=[];if(!w)return c;
+ if(w.temp!=null&&w.temp<=6)c.push('국물');
+ if(w.temp!=null&&w.temp>=27){c.push('카페');c.push('면요리')}
+ if(w.code!=null&&((w.code>=51&&w.code<=67)||(w.code>=80&&w.code<=82)||(w.code>=95)))c.push('국물');
+ return c
+}
+function pickCands(prefer){
+ var a=places.filter(function(p){return p.lat!=null});
+ a.forEach(function(p){p._d=S.pos?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null});
+ a=a.filter(function(p){return p._d==null||p._d<4000});
+ a.forEach(function(p){p._s=(prefer.indexOf(cat(p.name))>=0?3:0)-(p._d||0)/6000});
+ a.sort(function(x,y){return y._s-x._s});
+ return a.slice(0,6)
+}
+async function goPick(){
+ S.pickMood=null;S.pickList=[];S.pickIdx=0;S.weather=null;go('pick');
+ if(!S.pos)await locate();
+ if(S.pos){S.weather=await fetchWeather(S.pos.lat,S.pos.lng);if(S.screen==='pick')render()}
+}
+function moodPick(i){
+ S.pickMood=i;
+ var prefer=(MOODS[i]?MOODS[i][1]:[]).concat(wxCats(S.weather));
+ S.pickList=pickCands(prefer);S.pickIdx=0;
+ if(!S.pickList.length)toast('근처에 저장된 맛집이 없어요. 먼저 몇 곳 저장해 주세요');
+ render()
+}
+function pickReroll(){if(S.pickList.length>1){S.pickIdx=(S.pickIdx+1)%S.pickList.length;render()}}
+function vPick(){
+ var w=S.weather,wd=w?wxDesc(w.code):'';
+ var wline=w?('<div class="sub" style="font-size:12px">'+(w.temp!=null?Math.round(w.temp)+'℃ · ':'')+wd+'</div>'):'<div class="sub" style="font-size:12px">날씨를 확인하는 중…</div>';
+ if(S.pickMood==null){
+  var chips=MOODS.map(function(m,i){return '<button class="memo card" data-act="mood" data-i="'+i+'" style="min-height:60px"><div class="mt"><b style="font-size:17px">'+m[0]+'</b></div></button>'}).join('');
+  return '<div class="scr"><div class="edge"></div>'+back()+
+  '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">오늘 기분이 어때요?</div></div></div>'+
+  wline+chips+'<div class="grow"></div></div>';
+ }
+ var p=S.pickList[S.pickIdx];
+ if(!p){
+  return '<div class="scr"><div class="edge"></div>'+back()+
+  '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">추천하기</div></div></div>'+
+  wline+'<div class="grow"></div><div class="card" style="padding:18px 16px;text-align:center"><div class="sub">근처에 저장된 맛집이 없어요</div></div><div class="grow"></div>'+
+  '<button class="btn line" data-act="goSave">먼저 저장하러 가기</button><button class="link" data-act="back">뒤로</button></div>';
+ }
+ var th=p.photo?'<div class="ph" style="background-image:url('+p.photo+')"></div>':'';
+ return '<div class="scr"><div class="edge"></div>'+back()+
+ '<div class="top"><div><div class="eyebrow">PICK FOR ME · '+esc(MOODS[S.pickMood][0])+'</div><div class="h1" style="font-size:26px">오늘은 여기 어때요?</div></div></div>'+
+ wline+th+
+ '<div><div class="eyebrow">'+esc(cat(p.name))+(p._d!=null?' · '+fmt(p._d):'')+'</div><div class="h1" style="font-size:28px">'+esc(p.name)+'</div><div class="sub">'+esc(p.addr||'')+'</div></div>'+
+ '<div class="grow"></div>'+
+ '<button class="btn" data-act="pickOpen">이 곳으로 결정</button>'+
+ (S.pickList.length>1?'<button class="btn line" data-act="pickReroll">다른 곳 추천</button>':'')+
+ '<button class="link" data-act="pickMoodBack">기분 다시 고르기</button></div>';
+}
+
 /* ---------- navigation ---------- */
 function killMap(){if(S.map){try{mKill(S.map)}catch(e){}S.map=null;S.mk=[]}}
 function go(sc,opt){
@@ -322,17 +392,19 @@ function back(){return '<button class="back" data-act="back" aria-label="뒤로"
 function vHome(){
  var n=places.length;
  return '<div class="scr pad"><div class="edge"></div>'+
- '<div class="h1" style="font-size:40px;letter-spacing:-0.05em">나의<br>맛집 다이어리</div>'+
+ '<div class="h1" style="font-size:32px;letter-spacing:-0.05em">나의 맛집 다이어리</div>'+
  '<div class="sub" style="font-size:12px">'+today()+'</div><div class="rule"></div>'+
- '<button class="memo dark" data-act="goSave"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span class="eyebrow">SAVE</span><svg class="ic" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div><div><b>저장하기</b><span class="d">찍거나, 쓰거나, 사진을 올려요</span></div></button>'+
- '<button class="memo card" data-act="goFind"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span class="eyebrow">PULL OUT</span><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg></div><div><b>꺼내기</b><span class="d">저장한 '+n+'곳 | 내 주변부터</span></div></button></div>';
+ '<button class="memo dark" data-act="goSave"><div class="mt"><span class="eyebrow">SAVE</span><b>저장하기</b><span class="d">찍거나, 쓰거나, 사진을 올려요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>'+
+ '<button class="memo card" data-act="goFind"><div class="mt"><span class="eyebrow">PULL OUT</span><b>꺼내기</b><span class="d">저장한 '+n+'곳 | 내 주변부터</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg></button>'+
+ '<button class="memo card" data-act="goPick"><div class="mt"><span class="eyebrow">PICK FOR ME</span><b>추천하기</b><span class="d">오늘 날씨·기분에 맞춰 근처 맛집을 골라줘요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg></button>'+
+ '<div class="grow"></div></div>';
 }
 function vSave(){
  return '<div class="scr"><div class="edge"></div>'+back()+
- '<div class="top"><div><div class="eyebrow">SAVE / PLACE / DIARY</div><div class="h1">저장하기</div></div><div class="sub" id="loc">'+esc(S.posLabel)+'</div></div>'+
- '<button class="memo dark" data-act="camShot" style="flex:none;min-height:150px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span class="eyebrow">CAMERA</span><svg class="ic" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div><div><b>사진 찍기</b><span class="d">간판을 찍으면 가게를 찾고, 지금 위치도 함께 써요</span></div></button>'+
- '<button class="memo card" data-act="albumPick" style="flex:none;min-height:110px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span class="eyebrow">ALBUM</span><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg></div><div><b>앨범에서 고르기</b><span class="d">찍어둔 간판 사진으로 찾아요</span></div></button>'+
- (S.installEv?'<button class="la" style="align-self:center" data-act="install">앱으로 설치하기</button>':'')+
+ '<div class="top"><div><div class="eyebrow">SAVE / PLACE / DIARY</div><div class="h1" style="font-size:26px">저장하기</div></div><div class="sub" id="loc">'+esc(S.posLabel)+'</div></div>'+
+ '<button class="memo dark" data-act="camShot"><div class="mt"><span class="eyebrow">CAMERA</span><b>사진 찍기</b><span class="d">간판 + 지금 위치</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>'+
+ '<button class="memo card" data-act="albumPick"><div class="mt"><span class="eyebrow">ALBUM</span><b>앨범에서 고르기</b><span class="d">찍어둔 간판 사진</span></div><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg></button>'+
+ (S.installEv?'<button class="link" style="padding:0" data-act="install">앱으로 설치하기</button>':'')+
  '<div class="grow"></div>'+
  '<div class="sub" style="text-align:center;font-size:12px">또는 가게 이름으로</div>'+
  '<div class="field"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="qName" value="'+esc(S.query)+'" placeholder="가게 이름 (동네와 같이 적어도 돼요)" autocomplete="off" enterkeyhint="search"></div>'+
@@ -416,7 +488,7 @@ function vPin(){
  '<div class="sub" id="pinAddr" style="flex:none;min-height:36px">지도를 움직여 가게 위치에 동그라미를 맞춰 주세요</div>'+
  '<button class="btn" data-act="pinOk">이 위치로 정하기</button></div>';
 }
-var VIEWS={home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin,review:vReview};
+var VIEWS={home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin,review:vReview,pick:vPick};
 
 /* ---------- maps (네이버 지도 → 없으면 OpenStreetMap) ---------- */
 function mkMap(id,center,zoom){
@@ -678,6 +750,11 @@ document.addEventListener('click',function(e){
   case 'install':if(S.installEv){S.installEv.prompt();S.installEv=null;render()}break;
   case 'find':doFind();break;
   case 'camShot':$('#fCam').click();break;
+  case 'goPick':goPick();break;
+  case 'mood':moodPick(+t.getAttribute('data-i'));break;
+  case 'pickReroll':pickReroll();break;
+  case 'pickMoodBack':S.pickMood=null;render();break;
+  case 'pickOpen':var pp=S.pickList[S.pickIdx];if(pp){S.openId=pp.id;S.hl=pp.id;go('detail')}break;
   case 'albumPick':$('#fPic').click();break;
   case 'reread':rereadSign();break;
   case 'pick':S.sel=+t.getAttribute('data-i');syncConfirm();break;
