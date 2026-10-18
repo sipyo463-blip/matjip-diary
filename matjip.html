@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#EBE3D0">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
 <title>나의 맛집 다이어리</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
@@ -121,6 +123,10 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .warn{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px dashed var(--stamp);color:var(--stamp);border-radius:14px;padding:12px 14px;font-size:13px;font-weight:700}
 .warn button{border:1px solid var(--stamp);border-radius:9px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--stamp)}
 .two{display:flex;gap:10px}.two>*{flex:1}
+.la{display:block;font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin-top:6px;text-align:left}
+.xh{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2.5px solid var(--stamp);z-index:900;pointer-events:none;background:rgba(154,91,62,.18)}
+.xh:after{content:'';position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:var(--stamp)}
+.spec input{flex:1;min-width:0;border:0;outline:0;background:none;font-size:14px;line-height:1.6;padding:0}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);background:var(--ink);color:var(--paper);font-size:13px;padding:10px 16px;border-radius:9px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .2s;max-width:86vw;text-align:center}
 #toast.on{opacity:1}
 .spin{width:16px;height:16px;border:2px solid rgba(235,227,208,.4);border-top-color:var(--paper);border-radius:50%;animation:sp .8s linear infinite}
@@ -133,7 +139,7 @@ input[type=file]{display:none}
 <div id="toast"></div>
 <input type="file" id="fCam" accept="image/*" capture="environment">
 <input type="file" id="fAlb" accept="image/*">
-<input type="file" id="fRaw">
+<input type="file" id="fRaw" accept="image/*,application/octet-stream">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function(){
@@ -168,7 +174,7 @@ function ini(n){return esc((String(n).trim()[0]||'맛'))}
 function copy(t){try{navigator.clipboard.writeText(t).then(function(){toast('복사했어요')},fb)}catch(e){fb()}function fb(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('복사했어요')}catch(e){toast('복사하지 못했어요')}a.remove()}}
 
 /* ---------- location / geocoding ---------- */
-var S={screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,gpsFrom:null,map:null,mk:[],stack:[]};
+var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[]};
 
 function locate(){
  return new Promise(function(res){
@@ -339,7 +345,8 @@ function vSave(){
  return '<div class="scr"><div class="edge"></div>'+
  '<div class="top"><div>'+back()+'<div class="eyebrow">SAVE / PLACE / DIARY</div><div class="h1">저장하기</div></div><div class="sub" id="loc">'+esc(S.posLabel)+'</div></div>'+
  '<label for="fCam" class="memo dark" style="cursor:pointer;flex:1 1 0;min-height:110px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span class="eyebrow">CAMERA</span><svg class="ic" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div><div><b>카메라로 찍기</b><span class="d">폰 카메라 앱으로 간판을 찍어요 (확대 가능)</span></div></label>'+
- '<button class="memo card" data-act="album" style="flex:1 1 0;min-height:110px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span class="eyebrow">ALBUM</span><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg></div><div><b>앨범에서 고르기</b><span class="d">이미 찍어둔 사진을 불러와요</span></div></button>'+
+ '<button class="memo card" data-act="album" style="flex:1 1 0;min-height:110px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span class="eyebrow">ALBUM</span><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg></div><div><b>앨범에서 고르기</b><span class="d">찍어둔 사진을 불러와요 (위치 포함)</span></div></button>'+
+ '<div class="sub" style="font-size:12px;line-height:1.5;flex:none;padding:0 2px">앨범에서 위치가 안 읽히면 <b>갤러리 앱에서 사진을 열고 공유 → 나의 맛집 다이어리</b>로 보내 주세요. 위치가 그대로 와요.'+(S.installEv?' <button class="la" style="display:inline" data-act="install">앱으로 설치하기</button>':'')+'</div>'+
  '<div class="sub" style="text-align:center;font-size:12px;flex:none">또는 이름으로</div>'+
  '<div class="field"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="qName" value="'+esc(S.query)+'" placeholder="가게 이름 (동네와 같이 적어도 돼요)" autocomplete="off" enterkeyhint="search"></div>'+
  '<button class="btn" data-act="find" id="goBtn">찾기</button></div>';
@@ -347,12 +354,15 @@ function vSave(){
 function locCard(){
  var t,s;
  if(S.photoGps&&S.gpsFrom==='exif'){t='사진에서 위치를 찾았어요';s=S.photoAddr||'주소를 확인하는 중…'}
+ else if(S.photoGps&&S.gpsFrom==='pin'){t='지도에서 고른 위치예요';s=S.photoAddr||'주소를 확인하는 중…'}
  else if(S.photoGps){t='현재 위치를 함께 저장해요';s=S.photoAddr||'주소를 확인하는 중…'}
  else if(S.src==='album'){t='사진에서 위치를 읽지 못했어요';var d=S.dbg||{};
-  s=(!d.tiff?'사진 정보(EXIF)가 통째로 없어요. 앨범에서 고르는 과정에서 폰이 지웠거나, 메신저로 받은 사진일 수 있어요.':'사진 정보는 있는데 위치 항목이 비어 있어요. 폰이 앨범에서 고르는 과정에 위치를 지운 거예요.')+' 아래 \'원본 파일로 다시 고르기\'를 써 보거나, 동네와 같이 적어 주세요.'}
- else{t='위치를 확인하지 못했어요';s='동네와 같이 적어 주세요. 예) 가정동 접시고기'}
- var raw=(!S.photoGps&&S.src==='album')?'<label for="fRaw" style="font-size:13px;font-weight:700;text-decoration:underline;cursor:pointer;margin-top:6px">원본 파일로 다시 고르기</label>':'';
- return '<div class="card" style="padding:14px 16px;display:flex;flex-direction:column;gap:2px"><div style="font-size:14px;font-weight:700">'+t+'</div><div class="sub" id="locSub">'+esc(s)+'</div>'+raw+'</div>';
+  s=(!d.tiff?'사진 정보(EXIF)가 없어요. 안드로이드가 앨범에서 고르는 과정에 지웠거나, 메신저로 받은 사진일 수 있어요.':'사진 정보는 있는데 위치가 비어 있어요. 안드로이드가 앨범에서 고르는 과정에 위치를 지운 거예요.')+' 갤러리 앱에서 공유 → 나의 맛집 다이어리로 보내거나, 지도에서 직접 고르면 주소를 찾아 줘요.'}
+ else{t='위치를 확인하지 못했어요';s='지도에서 직접 고르거나, 동네와 같이 적어 주세요. 예) 가정동 접시고기'}
+ var acts='';
+ if(!S.photoGps&&S.src==='album')acts+='<label for="fAlb" class="la">갤러리 선택창으로 다시 고르기</label>';
+ acts+='<button class="la" data-act="pinPick">'+(S.photoGps?'위치가 달라요 · 지도에서 고르기':'지도에서 위치 고르기')+'</button>';
+ return '<div class="card" style="padding:14px 16px;display:flex;flex-direction:column;gap:2px"><div style="font-size:14px;font-weight:700">'+t+'</div><div class="sub" id="locSub">'+esc(s)+'</div>'+acts+'</div>';
 }
 function vPhoto(){
  return '<div class="scr"><div class="edge"></div>'+back()+
@@ -381,9 +391,9 @@ function vConfirm(){
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">CHECK / PLACE</div><div class="h1">여기 맞아요?</div></div><div class="sub">"'+esc(S.query)+'"</div></div>'+
  rows+none+
- (hasMap?'<div class="mapbox"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.gpsFrom==='exif'?'사진 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
- '<div class="two" style="flex:none"><div class="field" style="flex:1;font-size:14px"><input id="qMemo" value="'+esc(S.memo)+'" placeholder="메모 (선택)"></div>'+(S.cands.length?'<button class="btn" style="width:110px;flex:none" data-act="confirmSave">저장</button>':'')+'</div>'+
- '<button class="link" data-act="saveHere">'+alt+'</button></div>';
+ (hasMap?'<div class="mapbox"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.gpsFrom==='exif'?'사진 위치':S.photoGps&&S.gpsFrom==='pin'?'고른 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
+ '<div class="two" style="flex:none">'+(S.editMode?'':'<div class="field" style="flex:1;font-size:14px"><input id="qMemo" value="'+esc(S.memo)+'" placeholder="메모 (선택)"></div>')+(S.cands.length?'<button class="btn" style="'+(S.editMode?'':'width:110px;flex:none')+'" data-act="confirmSave">'+(S.editMode?'이 위치로 바꾸기':'저장')+'</button>':'')+'</div>'+
+ (S.fillId?'':'<button class="link" data-act="saveHere">'+alt+'</button>')+'</div>';
 }
 function vFind(){
  return '<div class="fwrap"><div id="fmap"></div>'+
@@ -397,8 +407,8 @@ function vDetail(){
  var d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null;
  var spec=function(k,v){return '<div class="r"><div class="k">'+k+'</div><div class="v"></div><div>'+v+'</div></div>'};
  var srcL={camera:'촬영',album:'앨범 사진',name:'이름 입력',remote:'이름 입력',sheet:'시트에서 가져옴'}[p.src]||'';
- return '<div class="scr"><div class="edge"></div>'+back()+
- (p.photo?'<div class="ph" style="background-image:url('+p.photo+')"><em>저장할 때 찍은 사진</em></div>':'')+
+ return '<div class="scr"><div class="edge"></div><div class="top" style="align-items:center">'+back()+'<button class="chip" data-act="edit">정보 수정</button></div>'+
+ (p.photo?'<div class="ph" style="background-image:url('+p.photo+')"><em>'+(p.thumb?(p.thumb==='naver'?'네이버 지도':'지도')+' 썸네일':'저장할 때 찍은 사진')+'</em></div>':'')+
  '<div><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><div class="h1" style="font-size:32px">'+esc(p.name)+'</div></div>'+
  (p.needsAddr?'<div class="warn"><span>위치가 아직 없어요</span><button data-act="fill">주소 채우기</button></div>':'')+
  '<div class="spec">'+spec('주 소',esc(p.addr||'-'))+
@@ -409,7 +419,29 @@ function vDetail(){
  '<div class="two"><button class="btn line" data-act="copy">주소 복사</button><button class="btn line" data-act="visit">'+(p.visited?'다녀왔어요 ✓':'다녀왔어요')+'</button></div>'+
  '<button class="link" data-act="del">삭제</button></div>';
 }
-var VIEWS={home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail};
+function srow(k,h){return '<div class="r"><div class="k">'+k+'</div><div class="v"></div>'+h+'</div>'}
+function vEdit(){
+ var p=byId(S.openId),d=S.draft;if(!p||!d)return vHome();
+ var has=d.lat!=null;
+ return '<div class="scr" style="overflow-y:auto"><div class="edge"></div>'+back()+
+ '<div><div class="eyebrow">EDIT / PLACE</div><div class="h1" style="font-size:28px">맛집 정보 수정</div></div>'+
+ '<div class="spec">'+srow('이 름','<input id="eName" value="'+esc(d.name)+'" placeholder="가게 이름">')+
+ srow('주 소','<textarea id="eAddr" rows="2" placeholder="주소">'+esc(d.addr)+'</textarea>')+
+ srow('메 모','<textarea id="eMemo" rows="2" placeholder="메모를 남겨요">'+esc(d.memo)+'</textarea>')+'</div>'+
+ '<div class="card" style="padding:12px 16px"><div style="font-size:14px;font-weight:700">'+(has?(d.loc?'새 위치로 바꿀 거예요 (저장하면 적용)':'지도 위치가 연결돼 있어요'):'지도 위치가 없어요')+'</div><div class="sub">지도에서 엉뚱한 곳에 있다면 아래에서 다시 찾아요.</div></div>'+
+ '<div class="field"><input id="eQ" value="'+esc(d.q)+'" placeholder="네이버에서 찾을 이름 (동네와 같이)" autocomplete="off" enterkeyhint="search"></div>'+
+ '<div class="two"><button class="btn line" data-act="eFind">네이버에서 다시 찾기</button><button class="btn line" data-act="ePin">지도에서 직접 고르기</button></div>'+
+ '<div class="grow"></div><button class="btn" data-act="eSave">저장</button></div>';
+}
+function vPin(){
+ return '<div class="scr"><div class="edge"></div>'+back()+
+ '<div><div class="eyebrow">PIN / LOCATION</div><div class="h1" style="font-size:28px">지도에서 위치 고르기</div></div>'+
+ '<div class="field" style="height:48px"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="qPin" placeholder="동네·건물 이름으로 지도 이동" autocomplete="off" enterkeyhint="search"></div>'+
+ '<div class="mapbox"><div id="cmap"></div><div class="xh"></div></div>'+
+ '<div class="sub" id="pinAddr" style="flex:none;min-height:36px">지도를 움직여 가게 위치에 동그라미를 맞춰 주세요</div>'+
+ '<button class="btn" data-act="pinOk">이 위치로 정하기</button></div>';
+}
+var VIEWS={home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin};
 
 /* ---------- maps (네이버 지도 → 없으면 OpenStreetMap) ---------- */
 function mkMap(id,center,zoom){
@@ -446,6 +478,8 @@ function mFit(M,pts,pad,maxZ){
   if(maxZ&&M.m.getZoom()>maxZ)M.m.setZoom(maxZ);
  }else M.m.fitBounds(pts,{paddingTopLeft:[pad[3],pad[0]],paddingBottomRight:[pad[1],pad[2]],maxZoom:maxZ});
 }
+function mCenter(M){var c=M.m.getCenter();return M.t==='n'?{lat:c.lat(),lng:c.lng()}:{lat:c.lat,lng:c.lng}}
+function mIdle(M,fn){if(M.t==='n')naver.maps.Event.addListener(M.m,'idle',fn);else M.m.on('moveend',fn)}
 function mSize(M){if(M.t==='l')M.m.invalidateSize();else try{naver.maps.Event.trigger(M.m,'resize')}catch(e){}}
 function mKill(M){if(M.t==='l')M.m.remove();else try{M.m.destroy()}catch(e){}}
 function pinHtml(n,cls){return '<div class="pn '+(cls||'')+'">'+(n==null?'':n)+'</div>'}
@@ -518,6 +552,8 @@ function render(){
  if(S.screen==='save'&&!S.pos)locate().then(function(){var e=$('#loc');if(e)e.textContent=S.posLabel});
  if(S.screen==='photo'&&S.photoGps&&!S.photoAddr){var g=S.photoGps;rev(g.lat,g.lng).then(function(r){S.photoAddr=r?r.addr:'주소를 확인하지 못했어요';var e=$('#locSub');if(e)e.textContent=S.photoAddr})}
  if(S.screen==='confirm')confirmMap();
+ if(S.screen==='pin')pinMap();
+ if(S.screen==='detail')ensureThumb(byId(S.openId));
  if(S.screen==='find')afterFind();
 }
 
@@ -526,18 +562,20 @@ async function doFind(){
  var q=(S.query||'').trim();
  if(!q){toast('가게 이름을 적어 주세요');var i=$('#qName');if(i)i.focus();return}
  var b=$('#goBtn');if(b){b.disabled=true;b.innerHTML='<span class="spin"></span>찾는 중'}
- var near=S.photoGps||S.pos;
+ var near=S.nearO||S.photoGps||S.pos;S.nearO=null;
  if(!near&&S.screen==='save')near=await locate();
  try{S.cands=await searchPlaces(q,near)}catch(e){S.cands=[]}
  S.sel=0;S.memo=S.memo||'';go('confirm');
 }
 function addPlace(o){var p=Object.assign({id:uid(),name:'',addr:'',lat:null,lng:null,memo:'',src:'name',photo:null,visited:false,createdAt:Date.now(),needsAddr:false},o);places.unshift(p);persist();return p}
 function finishSave(msg){S.query='';S.memo='';S.photo=null;S.photoGps=null;S.cands=[];S.fillId=null;toast(msg||'저장했어요');go('home',{reset:true})}
-function confirmSave(){
+async function confirmSave(){
  var c=S.cands[S.sel];if(!c)return;
- if(S.fillId){var p=byId(S.fillId);if(p){p.lat=c.lat;p.lng=c.lng;p.addr=c.addr;p.needsAddr=false;if(S.memo)p.memo=S.memo;if(!p.photo&&S.photo)p.photo=S.photo;persist()}
+ if(S.editMode&&S.draft){var d=S.draft;d.addr=c.addr;d.lat=c.lat;d.lng=c.lng;d.q=c.name;d.loc=true;S.editMode=false;S.fillId=null;S.cands=[];toast('위치를 골랐어요. 저장을 눌러 확정해요');history.back();return}
+ if(S.fillId){var p=byId(S.fillId);if(p){p.lat=c.lat;p.lng=c.lng;p.addr=c.addr;p.needsAddr=false;if(S.memo)p.memo=S.memo;if(!p.photo&&S.photo)p.photo=S.photo;persist();if(!p.photo&&!c.approx){var tf=await mapThumb(c.lat,c.lng);if(tf){p.photo=tf.img;p.thumb=tf.from;persist()}}}
   var id=S.fillId;S.query='';S.memo='';S.cands=[];S.fillId=null;toast('위치를 채웠어요');S.openId=id;S.stack=['home'];S.screen='detail';render();return}
- addPlace({name:c.name,addr:c.addr,lat:c.lat,lng:c.lng,memo:S.memo,src:S.src,photo:S.photo});
+ var th=null;if(!S.photo&&!c.approx){toast('지도 썸네일을 가져오는 중…');th=await mapThumb(c.lat,c.lng)}
+ addPlace({name:c.name,addr:c.addr,lat:c.lat,lng:c.lng,memo:S.memo,src:S.src,photo:S.photo||(th&&th.img)||null,thumb:(!S.photo&&th)?th.from:null});
  finishSave();
 }
 async function saveHere(){
@@ -547,24 +585,101 @@ async function saveHere(){
  if(!g&&!(S.query||'').trim()){toast('이름을 적어 주세요');return}
  var addr='',lat=null,lng=null;
  if(g){lat=g.lat;lng=g.lng;var r=await rev(lat,lng);addr=r?r.addr:''}
- addPlace({name:name,addr:addr,lat:lat,lng:lng,memo:S.memo,src:S.src,photo:S.photo,needsAddr:!g});
+ var th2=null;if(!S.photo&&g)th2=await mapThumb(lat,lng);
+ addPlace({name:name,addr:addr,lat:lat,lng:lng,memo:S.memo,src:S.src,photo:S.photo||(th2&&th2.img)||null,thumb:(!S.photo&&th2)?th2.from:null,needsAddr:!g});
  finishSave(g?'현재 위치로 저장했어요':'이름만 저장했어요. 나중에 위치를 채워요');
+}
+/* ---------- 지도 썸네일 (사진 없이 저장할 때) ---------- */
+function tileXY(lat,lng,z){var n=Math.pow(2,z),r=lat*Math.PI/180;return {x:(lng+180)/360*n,y:(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n}}
+function loadTile(z,x,y){return new Promise(function(res){var im=new Image();im.crossOrigin='anonymous';im.onload=function(){res(im)};im.onerror=function(){res(null)};im.src='https://tile.openstreetmap.org/'+z+'/'+x+'/'+y+'.png'})}
+async function osmThumb(lat,lng){
+ var z=17,t=tileXY(lat,lng,z),tx=Math.floor(t.x),ty=Math.floor(t.y),W=240;
+ var c=document.createElement('canvas');c.width=c.height=W;var g=c.getContext('2d');g.fillStyle='#E0D6BE';g.fillRect(0,0,W,W);
+ var ox=W/2-(t.x-tx)*256,oy=W/2-(t.y-ty)*256,jobs=[],ok=0;
+ for(var dx=-1;dx<=1;dx++)for(var dy=-1;dy<=1;dy++)(function(dx,dy){jobs.push(loadTile(z,tx+dx,ty+dy).then(function(im){if(im){g.drawImage(im,ox+dx*256,oy+dy*256);ok++}}))})(dx,dy);
+ await Promise.all(jobs);if(!ok)return null;
+ g.beginPath();g.arc(W/2,W/2,10,0,6.2832);g.fillStyle='#9A5B3E';g.fill();g.lineWidth=3;g.strokeStyle='#F5EFDF';g.stroke();
+ try{return c.toDataURL('image/jpeg',.72)}catch(e){return null}
+}
+async function mapThumb(lat,lng){
+ if(lat==null)return null;
+ if(PLACE_PROXY){try{var r=await fetch(PLACE_PROXY+(PLACE_PROXY.indexOf('?')<0?'?':'&')+'map='+lat+','+lng);var j=await r.json();if(j&&j.img)return {img:j.img,from:'naver'}}catch(e){}}
+ var o=await osmThumb(lat,lng);return o?{img:o,from:'osm'}:null;
+}
+var thumbBusy={};
+function ensureThumb(p){
+ if(!p||p.lat==null||p.photo||thumbBusy[p.id])return;
+ thumbBusy[p.id]=1;
+ mapThumb(p.lat,p.lng).then(function(t){
+  if(t&&!p.photo){p.photo=t.img;p.thumb=t.from;persist();if(S.screen==='detail'&&S.openId===p.id)render()}
+ }).catch(function(){});
+}
+function pinMap(){
+ var g=null;
+ if(S.pinFor==='edit'&&S.draft&&S.draft.lat!=null)g={lat:S.draft.lat,lng:S.draft.lng};
+ else if(S.pinFor==='photo'&&S.photoGps)g=S.photoGps;
+ g=g||S.pos||{lat:37.4563,lng:126.7052};
+ S.map=mkMap('cmap',[g.lat,g.lng],17);if(!S.map)return;
+ mIdle(S.map,function(){clearTimeout(S.pt);S.pt=setTimeout(pinAddrUpdate,350)});
+ setTimeout(function(){S.map&&mSize(S.map);pinAddrUpdate()},120);
+}
+async function pinAddrUpdate(){
+ if(!S.map||S.screen!=='pin')return;
+ var c=mCenter(S.map);S.pinC=c;
+ var r=await rev(c.lat,c.lng);
+ if(S.pinC!==c||S.screen!=='pin')return;
+ S.pinAddr=r?r.addr:'';
+ var e=$('#pinAddr');if(e)e.textContent=S.pinAddr||'주소를 확인하지 못했어요 (위치는 저장돼요)';
+}
+async function pinSearch(){
+ var q=(($('#qPin')||{}).value||'').trim();if(!q)return;
+ var r=[];try{r=await searchPlaces(q,S.pinC||S.pos)}catch(e){}
+ if(!r.length||!S.map){toast('찾지 못했어요. 다른 이름으로 시도해 주세요');return}
+ mView(S.map,r[0].lat,r[0].lng,17);
+}
+function pinOk(){
+ var c=S.pinC||(S.map&&mCenter(S.map));if(!c){toast('지도를 불러오는 중이에요');return}
+ if(S.pinFor==='edit'&&S.draft){S.draft.lat=c.lat;S.draft.lng=c.lng;if(S.pinAddr)S.draft.addr=S.pinAddr;S.draft.loc=true;toast('위치를 골랐어요. 저장을 눌러 확정해요')}
+ else{S.photoGps={lat:c.lat,lng:c.lng};S.gpsFrom='pin';S.photoAddr=S.pinAddr||''}
+ history.back();
+}
+async function eSave(){
+ var p=byId(S.openId),d=S.draft;if(!p||!d)return;
+ var name=(d.name||'').trim();if(!name){toast('이름을 적어 주세요');return}
+ var addr=(d.addr||'').trim(),lat=d.lat,lng=d.lng,msg='수정했어요';
+ if(!d.loc&&addr&&addr!==d.addr0){
+  var g=await nvGeo(addr);
+  if(!g){try{var r=await searchPlaces(addr,null);if(r[0]&&!r[0].approx)g=r[0]}catch(e){}}
+  if(g){lat=g.lat;lng=g.lng;msg='수정했어요. 주소로 지도 위치도 다시 찾았어요'}
+  else msg='글자만 수정했어요. 지도 위치는 그대로예요'
+ }
+ var moved=(lat!==p.lat||lng!==p.lng);
+ p.name=name;p.addr=addr;p.memo=d.memo||'';p.lat=lat;p.lng=lng;p.needsAddr=(lat==null);
+ if(moved&&(!p.photo||p.thumb)){p.photo=null;p.thumb=null;if(lat!=null){var te=await mapThumb(lat,lng);if(te){p.photo=te.img;p.thumb=te.from}}}
+ persist();toast(msg);history.back();
 }
 document.addEventListener('click',function(e){
  var t=e.target.closest('[data-act]');if(!t)return;
  var a=t.getAttribute('data-act'),id=t.getAttribute('data-id');
  switch(a){
   case 'back':history.back();break;
-  case 'goSave':if(S.screen==='find'){killMap();S.screen='save';S.stack=['home'];render()}else{S.query='';S.fillId=null;go('save')}break;
+  case 'goSave':S.editMode=false;if(S.screen==='find'){killMap();S.screen='save';S.stack=['home'];render()}else{S.query='';S.fillId=null;go('save')}break;
   case 'goFind':S.q='';S.chip='near';S.hl=null;go('find');break;
-  case 'album':$('#fAlb').click();break;
+  case 'album':$('#fRaw').click();break;
+  case 'install':if(S.installEv){S.installEv.prompt();S.installEv=null;render()}break;
   case 'find':doFind();break;
   case 'pick':S.sel=+t.getAttribute('data-i');syncConfirm();break;
   case 'confirmSave':confirmSave();break;
   case 'saveHere':saveHere();break;
   case 'chip':S.chip=t.getAttribute('data-c');refreshFind(false);break;
   case 'open':S.openId=id;S.hl=id;go('detail');break;
-  case 'fill':var p=byId(S.openId);S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
+  case 'edit':var ep=byId(S.openId);if(!ep)break;S.draft={name:ep.name,addr:ep.addr||'',memo:ep.memo||'',lat:ep.lat,lng:ep.lng,q:ep.name,addr0:ep.addr||'',loc:false};go('edit');break;
+  case 'eFind':var ed=S.draft;S.fillId=S.openId;S.editMode=true;S.query=(ed.q||ed.name||'').trim();S.cands=[];S.photoGps=null;S.photo=null;S.nearO=ed.lat!=null?{lat:ed.lat,lng:ed.lng}:null;doFind();break;
+  case 'ePin':S.pinFor='edit';S.pinAddr='';go('pin');break;
+  case 'eSave':eSave();break;
+  case 'pinPick':S.pinFor='photo';S.pinAddr='';go('pin');break;
+  case 'pinOk':pinOk();break;
+  case 'fill':var p=byId(S.openId);S.editMode=false;S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
   case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';go('find');break;
   case 'copy':var c=byId(S.openId);copy(c.addr||c.name);break;
   case 'visit':var v=byId(S.openId);v.visited=!v.visited;persist();render();break;
@@ -575,12 +690,21 @@ document.addEventListener('input',function(e){
  var i=e.target.id;
  if(i==='qName')S.query=e.target.value;
  else if(i==='qMemo')S.memo=e.target.value;
+ else if(i==='eName'&&S.draft)S.draft.name=e.target.value;
+ else if(i==='eAddr'&&S.draft){S.draft.addr=e.target.value}
+ else if(i==='eMemo'&&S.draft)S.draft.memo=e.target.value;
+ else if(i==='eQ'&&S.draft)S.draft.q=e.target.value;
  else if(i==='qFind'){S.q=e.target.value;refreshFind(false)}
 });
 document.addEventListener('change',function(e){
  if(e.target.id==='memoEd'){var p=byId(S.openId);if(p){p.memo=e.target.value;persist()}}
 });
-document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id==='qName'){e.preventDefault();e.target.blur();doFind()}});
+document.addEventListener('keydown',function(e){
+ if(e.key!=='Enter')return;var i=e.target.id;
+ if(i==='qName'){e.preventDefault();e.target.blur();doFind()}
+ else if(i==='qPin'){e.preventDefault();e.target.blur();pinSearch()}
+ else if(i==='eQ'){e.preventDefault();e.target.blur();var b=document.querySelector('[data-act=eFind]');if(b)b.click()}
+});
 $('#fCam').addEventListener('change',function(e){var f=e.target.files[0];e.target.value='';takeFile(f,'camera')});
 $('#fAlb').addEventListener('change',function(e){var f=e.target.files[0];e.target.value='';takeFile(f,'album')});
 $('#fRaw').addEventListener('change',function(e){var f=e.target.files[0];e.target.value='';takeFile(f,'album')});
@@ -614,6 +738,21 @@ function loadNaver(){
  });
 }
 render();maybeImport();
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save')render()});
+try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
+(async function(){
+ try{
+  if(location.search.indexOf('shared=1')<0)return;
+  try{history.replaceState({},'',location.pathname)}catch(e){}
+  var c=await caches.open('shared-photo'),r=await c.match('shared');
+  if(!r){toast('공유한 사진을 받지 못했어요');return}
+  var b=await r.blob(),m=+r.headers.get('x-mod')||Date.now();
+  await c.delete('shared');
+  var f=new File([b],'shared.jpg',{type:b.type||'image/jpeg',lastModified:m});
+  S.stack=[];S.screen='home';
+  takeFile(f,'album');
+ }catch(e){toast('공유한 사진을 읽지 못했어요')}
+})();
 loadNaver().then(function(ok){NV=ok});
 })();
 </script>

@@ -1,0 +1,24 @@
+{
+  "name": "나의 맛집 다이어리",
+  "short_name": "맛집 다이어리",
+  "description": "찍어둔 맛집을 위치와 함께 모아요",
+  "start_url": "./matjip.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EBE3D0",
+  "theme_color": "#EBE3D0",
+  "lang": "ko",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "share_target": {
+    "action": "./share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [{"name": "photo", "accept": ["image/*"]}]
+    }
+  }
+}
