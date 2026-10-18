@@ -115,6 +115,11 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .sheet{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:600;background:var(--paper);border-radius:14px 14px 0 0;border-top:1px solid var(--line);padding:10px 18px 0;display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 18px rgba(62,53,43,.10);transition:height .2s,top .2s}
 .sheet.full{height:auto;top:calc(env(safe-area-inset-top,0px) + 112px)}
 .grab{align-self:center;width:36px;height:4px;border-radius:2px;background:var(--line);flex:none}
+.destiny-wheel{display:flex;flex-direction:column;align-items:center;gap:16px}
+.destiny-emoji{font-size:60px;animation:destinySpin 1s linear infinite}
+.destiny-name{font-size:21px;font-weight:800;letter-spacing:-0.03em;min-height:28px;padding:12px 22px;border-radius:14px;background:var(--card);border:1px solid var(--line);animation:destinyPulse .4s ease-in-out infinite}
+@keyframes destinySpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes destinyPulse{0%,100%{opacity:.5;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
 .sh{display:flex;align-items:baseline;justify-content:space-between;flex:none}
 .sh b{font-size:22px;font-weight:700;letter-spacing:-0.03em}
 .tabs{flex:none;margin:0 -18px;height:calc(60px + env(safe-area-inset-bottom,0px));padding:0 70px env(safe-area-inset-bottom,0px);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;font-size:12px;color:var(--sub);background:var(--paper)}
@@ -186,7 +191,7 @@ function ini(n){return esc((String(n).trim()[0]||'맛'))}
 function copy(t){try{navigator.clipboard.writeText(t).then(function(){toast('복사했어요')},fb)}catch(e){fb()}function fb(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('복사했어요')}catch(e){toast('복사하지 못했어요')}a.remove()}}
 
 /* ---------- location / geocoding ---------- */
-var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetFull:false};
+var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetFull:false,destinyTok:0};
 
 function locate(){
  return new Promise(function(res){
@@ -337,7 +342,7 @@ function pickCands(){
 }
 async function goPick(){
  S.pickStep=0;S.pickTaste=[];S.pickHunger=[];S.pickFeel=[];
- S.pickCands=[];S.pickRanked=[];S.pickLoading=false;S.weather=null;S.pickDestiny=false;
+ S.pickCands=[];S.pickRanked=[];S.pickLoading=false;S.weather=null;S.pickDestiny=false;S.destinySpin=false;S.destinyTok++;
  go('pick');
  if(!S.pos)await locate();
  if(S.pos){S.weather=await fetchWeather(S.pos.lat,S.pos.lng);if(S.screen==='pick')render()}
@@ -364,15 +369,26 @@ function destinyPick(excludeId){
  if(!places.length){toast('저장된 맛집이 없어요. 먼저 저장해 주세요');return}
  var a=places.slice();
  if(excludeId&&a.length>1)a=a.filter(function(p){return p.id!==excludeId});
+ if(!a.length)a=places.slice();
  a.forEach(function(p){p._d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null});
  var pick=a[Math.floor(Math.random()*a.length)];
- S.pickDestiny=true;
- S.pickRanked=[{place:pick,reason:'오늘의 운명이 골라줬어요 🔮 고민 말고 가보세요!'}];
- S.pickStep=1;S.pickLoading=false;
+ var spinId=++S.destinyTok;
+ S.pickDestiny=true;S.destinySpin=true;S.pickLoading=false;S.pickRanked=[];S.pickStep=1;
  render();
+ var iv=setInterval(function(){
+  if(S.destinyTok!==spinId){clearInterval(iv);return}
+  var el=$('#destinyName');if(el)el.textContent=a[Math.floor(Math.random()*a.length)].name;
+ },100);
+ setTimeout(function(){
+  clearInterval(iv);
+  if(S.destinyTok!==spinId)return;
+  S.destinySpin=false;
+  S.pickRanked=[{place:pick,reason:'오늘의 운명이 골라줬어요 🔮 고민 말고 가보세요!'}];
+  render();
+ },3000);
 }
 async function runPick(exclude){
- S.pickDestiny=false;
+ S.pickDestiny=false;S.destinySpin=false;S.destinyTok++;
  var cands=pickCands();
  S.pickCands=cands;
  if(!cands.length){S.pickStep=1;S.pickRanked=[];render();return}
@@ -402,7 +418,7 @@ function pickReroll(){
  if(S.pickDestiny){destinyPick(S.pickRanked[0]&&S.pickRanked[0].place.id);return}
  runPick(S.pickRanked.map(function(r){return r.place.id}));
 }
-function pickRetry(){S.pickStep=0;S.pickRanked=[];S.pickDestiny=false;render();}
+function pickRetry(){S.pickStep=0;S.pickRanked=[];S.pickDestiny=false;S.destinySpin=false;S.destinyTok++;render();}
 async function myLoc(){
  var p=await locate();if(!p){toast('위치를 확인할 수 없어요');return}
  if(S.map&&S.screen==='find')mView(S.map,p.lat,p.lng,16);
@@ -436,6 +452,13 @@ function vPick(){
   return '<div class="scr"><div class="edge"></div>'+back()+
   '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">AI가 고르는 중…</div></div></div>'+
   '<div class="grow"></div><div class="sub" style="text-align:center">취향에 맞는 곳을 찾고 있어요</div><div class="grow"></div></div>';
+ }
+ if(S.destinySpin){
+  return '<div class="scr"><div class="edge"></div>'+back()+
+  '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">운명을 돌리는 중…</div></div></div>'+
+  '<div class="grow"></div>'+
+  '<div class="destiny-wheel"><div class="destiny-emoji">🔮</div><div class="destiny-name" id="destinyName">…</div><div class="sub" style="text-align:center">오늘의 한 곳을 고르고 있어요</div></div>'+
+  '<div class="grow"></div></div>';
  }
  if(!S.pickRanked.length){
   return '<div class="scr"><div class="edge"></div>'+back()+
