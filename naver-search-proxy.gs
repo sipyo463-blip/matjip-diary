@@ -87,13 +87,9 @@ function doPost(e) {
     if (!m) return out_({ error: 'bad image' });
     var k = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_KEY');
     if (!k) return out_({ error: 'missing ANTHROPIC_KEY' });
-    // 1차 Haiku(저렴), 못 읽으면 2차 Sonnet(정확)
+    // Haiku 고정
     var a = sign_('claude-haiku-5-5', k, m);
-    if (a.error || !a.name) {
-      var s2 = sign_('claude-sonnet-5-5', k, m);
-      if (!s2.error) return out_({ name: s2.name, raw: s2.raw, model: 'sonnet' });
-      if (a.error) return out_({ error: s2.error });
-    }
+    if (a.error) return out_({ error: a.error });
     return out_({ name: a.name || '', raw: a.raw, model: 'haiku' });
   } catch (err) { return out_({ error: 'ocr failed' }); }
 }
