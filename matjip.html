@@ -1059,8 +1059,8 @@ function loadNaver(){
   document.head.appendChild(sc);
  });
 }
-render();maybeImport();
-if(isShared())pullSync(true);
+render();
+if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save')render()});
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
