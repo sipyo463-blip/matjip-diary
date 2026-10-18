@@ -347,20 +347,29 @@ function pickChoice(kind,i){
  if(p>=0)arr.splice(p,1);else arr.push(i);
  render()
 }
-function pickNext(){
- if(S.pickStep<2){S.pickStep++;render()}else runPick();
+function pickNext(){runPick()}
+function pickPrev(){back()}
+function timeOfDay_(){
+ var h=new Date().getHours();
+ if(h>=5&&h<9)return '새벽~아침(이른 아침, 해장/아침식사 시간대)';
+ if(h>=9&&h<11)return '아침~늦은아침(브런치 시간대)';
+ if(h>=11&&h<14)return '점심 시간대';
+ if(h>=14&&h<17)return '오후(식사 사이 시간대)';
+ if(h>=17&&h<21)return '저녁 식사 시간대';
+ if(h>=21&&h<24)return '밤(야식/술자리 시간대)';
+ return '새벽(늦은 밤~새벽)';
 }
-function pickPrev(){if(S.pickStep>0){S.pickStep--;render()}else{back()}}
 async function runPick(exclude){
  var cands=pickCands();
  S.pickCands=cands;
- if(!cands.length){S.pickStep=3;S.pickRanked=[];render();return}
- S.pickStep=3;S.pickLoading=true;render();
+ if(!cands.length){S.pickStep=1;S.pickRanked=[];render();return}
+ S.pickStep=1;S.pickLoading=true;render();
  var pick=function(a,arr){return arr.length?arr.map(function(i){return a[i]}).join(', '):'상관없음'};
  var body={pick:{
   cands:cands.map(function(c){return {id:c.id,name:c.name,cat:cat(c.name),dist:c._d}}),
   taste:pick(TASTES,S.pickTaste),hunger:pick(HUNGERS,S.pickHunger),feel:pick(FEELS,S.pickFeel),
   weather:S.weather?((S.weather.temp!=null?Math.round(S.weather.temp)+'℃ ':'')+wxDesc(S.weather.code)):'',
+  time:timeOfDay_(),
   exclude:exclude||[]
  }};
  var ranked=[];
@@ -379,6 +388,7 @@ function pickReroll(){
  if(S.pickLoading)return;
  runPick(S.pickRanked.map(function(r){return r.place.id}));
 }
+function pickRetry(){S.pickStep=0;S.pickRanked=[];render();}
 async function myLoc(){
  var p=await locate();if(!p){toast('위치를 확인할 수 없어요');return}
  if(S.map&&S.screen==='find')mView(S.map,p.lat,p.lng,16);
@@ -399,23 +409,14 @@ function vPick(){
  var step=S.pickStep||0;
  if(step===0){
   return '<div class="scr"><div class="edge"></div>'+back()+
-  '<div class="top"><div><div class="eyebrow">PICK FOR ME · 1/3</div><div class="h1" style="font-size:24px">오늘 뭐가 당겨요?</div></div></div>'+
-  wline+'<div class="sub" style="font-size:12px">여러 개 골라도 돼요</div>'+pickChips(TASTES,'pTaste',S.pickTaste)+
-  '<div class="grow"></div><button class="btn" data-act="pickNext">다음</button></div>';
+  '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:24px">오늘은 뭐 먹을까요?</div></div></div>'+
+  wline+
+  '<div class="sub" style="font-size:12px;margin-top:10px">오늘 뭐가 당겨요? · 여러 개 골라도 돼요</div>'+pickChips(TASTES,'pTaste',S.pickTaste)+
+  '<div class="sub" style="font-size:12px;margin-top:14px">얼마나 배고파요?</div>'+pickChips(HUNGERS,'pHunger',S.pickHunger)+
+  '<div class="sub" style="font-size:12px;margin-top:14px">오늘 기분은요?</div>'+pickChips(FEELS,'pFeel',S.pickFeel)+
+  '<div class="grow"></div><button class="btn" data-act="pickNext">추천받기</button></div>';
  }
- if(step===1){
-  return '<div class="scr"><div class="edge"></div>'+back()+
-  '<div class="top"><div><div class="eyebrow">PICK FOR ME · 2/3</div><div class="h1" style="font-size:24px">얼마나 배고파요?</div></div></div>'+
-  '<div class="sub" style="font-size:12px">여러 개 골라도 돼요</div>'+pickChips(HUNGERS,'pHunger',S.pickHunger)+
-  '<div class="grow"></div><button class="btn" data-act="pickNext">다음</button><button class="link" data-act="pickPrev">이전</button></div>';
- }
- if(step===2){
-  return '<div class="scr"><div class="edge"></div>'+back()+
-  '<div class="top"><div><div class="eyebrow">PICK FOR ME · 3/3</div><div class="h1" style="font-size:24px">오늘 기분은요?</div></div></div>'+
-  '<div class="sub" style="font-size:12px">여러 개 골라도 돼요</div>'+pickChips(FEELS,'pFeel',S.pickFeel)+
-  '<div class="grow"></div><button class="btn" data-act="pickNext">추천받기</button><button class="link" data-act="pickPrev">이전</button></div>';
- }
- // step 3: 로딩 or 결과
+ // step 1: 로딩 or 결과
  if(S.pickLoading){
   return '<div class="scr"><div class="edge"></div>'+back()+
   '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">AI가 고르는 중…</div></div></div>'+
@@ -440,7 +441,7 @@ function vPick(){
  wline+'<div class="list" style="gap:10px">'+cards+'</div>'+
  '<div class="grow"></div>'+
  '<button class="btn line" data-act="pickReroll">다른 곳 추천</button>'+
- '<button class="link" data-act="pickPrev">다시 고르기</button></div>';
+ '<button class="link" data-act="pickRetry">다시 고르기</button></div>';
 }
 
 /* ---------- navigation ---------- */
@@ -828,6 +829,7 @@ document.addEventListener('click',function(e){
   case 'pickNext':pickNext();break;
   case 'pickPrev':pickPrev();break;
   case 'pickReroll':pickReroll();break;
+  case 'pickRetry':pickRetry();break;
   case 'pickOpen':var pr=S.pickRanked[+t.getAttribute('data-i')];if(pr){S.openId=pr.place.id;S.hl=pr.place.id;go('detail')}break;
   case 'albumPick':$('#fPic').click();break;
   case 'reread':rereadSign();break;

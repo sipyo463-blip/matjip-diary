@@ -115,10 +115,12 @@ function pick_(p) {
     '\n- 배고픈 정도: ' + (p.hunger || '상관없음') +
     '\n- 오늘 기분: ' + (p.feel || '상관없음') +
     (p.weather ? '\n- 현재 날씨: ' + p.weather : '') +
-    '\n\n위 취향에 가장 잘 맞는 곳을 후보 중 ' + n + '곳을 골라 순위를 매기고, 정확히 아래 형식으로만 답하세요(다른 말 금지, 각 REASON은 100자를 넘기지 마세요):\n' +
+    (p.time ? '\n- 현재 시간대: ' + p.time : '') +
+    (p.time ? '\n\n시간대를 반드시 고려하세요. 예를 들어 아침/브런치 시간대에는 술집·포차·호프 등 음주 중심 장소를 추천하지 말고, 밤/야식 시간대에는 아침식사 전문점을 추천하지 마세요. 시간대에 안 맞는 후보보다 조금 덜 맞아도 시간대에 맞는 곳을 우선하세요.' : '') +
+    '\n\n위 취향에 가장 잘 맞는 곳을 후보 중 ' + n + '곳을 골라 순위를 매기고, 정확히 아래 형식으로만 답하세요. 다른 말이나 설명은 절대 쓰지 마세요. 각 REASON은 반드시 60자 이내의 한 문장으로 짧게 쓰세요:\n' +
     fmtEx.join('\n');
   var body = {
-    model: 'claude-haiku-5-5', max_tokens: 1000,
+    model: 'claude-haiku-5-5', max_tokens: 1200,
     messages: [{ role: 'user', content: [{ type: 'text', text: q }] }]
   };
   var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
@@ -139,7 +141,7 @@ function pick_(p) {
     if (!pool.some(function (c) { return String(c.id) === id; })) continue;
     if (seen[id]) continue;
     seen[id] = true;
-    items.push({ id: id, reason: rem ? rem[1].trim().slice(0, 100) : '' });
+    items.push({ id: id, reason: rem ? rem[1].trim().slice(0, 60) : '' });
   }
   if (!items.length) {
     for (var j = 0; j < n; j++) items.push({ id: pool[j].id, reason: '' });
