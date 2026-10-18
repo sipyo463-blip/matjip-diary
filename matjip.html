@@ -52,7 +52,6 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .memo span.d{display:block;font-size:12px;margin-top:2px;color:var(--sub)}
 .memo.dark span.d{color:rgba(235,227,208,.62)}
 .rule{border-top:1px solid var(--line);margin:8px 0 6px}
-.gearbtn{flex:none;width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--ink)}
 
 /* viewfinder */
 .vf{position:relative;flex:1;min-height:240px;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,#4a443d,#1c1916);color:#fff}
@@ -367,36 +366,6 @@ function timeOfDay_(){
  if(h>=21&&h<24)return '밤(야식/술자리 시간대)';
  return '새벽(늦은 밤~새벽)';
 }
-function getProfile(){
- try{var s=localStorage.getItem('matjip_profile_v1');return s?JSON.parse(s):null}catch(e){return null}
-}
-function saveProfile(p){try{localStorage.setItem('matjip_profile_v1',JSON.stringify(p))}catch(e){}}
-function zodiacSign_(birth){
- var d=new Date(birth+'T00:00:00');if(isNaN(d))return '';
- var v=(d.getMonth()+1)*100+d.getDate();
- if(v>=120&&v<=218)return '물병자리';
- if(v>=219&&v<=320)return '물고기자리';
- if(v>=321&&v<=419)return '양자리';
- if(v>=420&&v<=520)return '황소자리';
- if(v>=521&&v<=621)return '쌍둥이자리';
- if(v>=622&&v<=722)return '게자리';
- if(v>=723&&v<=822)return '사자자리';
- if(v>=823&&v<=922)return '처녀자리';
- if(v>=923&&v<=1023)return '천칭자리';
- if(v>=1024&&v<=1122)return '전갈자리';
- if(v>=1123&&v<=1221)return '사수자리';
- return '염소자리';
-}
-function biorhythm_(birth){
- var b=new Date(birth+'T00:00:00');if(isNaN(b))return null;
- var now=new Date();now.setHours(0,0,0,0);
- var days=Math.floor((now-b)/86400000);
- return {
-  p:Math.round(Math.sin(2*Math.PI*days/23)*100),
-  e:Math.round(Math.sin(2*Math.PI*days/28)*100),
-  i:Math.round(Math.sin(2*Math.PI*days/33)*100)
- };
-}
 async function destinyPick(excludeId){
  if(!places.length){toast('저장된 맛집이 없어요. 먼저 저장해 주세요');return}
  var a=places.slice();
@@ -411,27 +380,9 @@ async function destinyPick(excludeId){
   if(S.destinyTok!==spinId){clearInterval(iv);return}
   var el=$('#destinyName');if(el)el.textContent=a[Math.floor(Math.random()*a.length)].name;
  },100);
- var prof=getProfile();
- var result=null,reason='',desc='';
- if(prof&&prof.birth){
-  try{
-   if(!S.pos)await locate();
-   if(S.pos&&!S.weather)S.weather=await fetchWeather(S.pos.lat,S.pos.lng);
-   var bio=biorhythm_(prof.birth);
-   var body={destiny:{
-    cands:a.map(function(c){return {id:c.id,name:c.name,cat:cat(c.name),dist:c._d,addr:c.addr}}),
-    name:prof.name||'',zodiac:zodiacSign_(prof.birth),mbti:(prof.mbti||'').toUpperCase(),blood:prof.blood||'',
-    birthTime:prof.time||'',
-    biorhythm:bio?('신체 '+bio.p+'%, 감정 '+bio.e+'%, 지성 '+bio.i+'%'):'',
-    time:timeOfDay_(),
-    weather:S.weather?((S.weather.temp!=null?Math.round(S.weather.temp)+'℃ ':'')+wxDesc(S.weather.code)):''
-   }};
-   var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-   var j=await r.json();
-   if(j&&j.id){var m=a.find(function(x){return String(x.id)===String(j.id)});if(m){result=m;reason=j.reason||'';desc=j.desc||''}}
-  }catch(e){}
- }
- if(!result){result=a[Math.floor(Math.random()*a.length)];reason=reason||'오늘의 운명이 골라줬어요 🔮 고민 말고 가보세요!'}
+ var result=a[Math.floor(Math.random()*a.length)];
+ var reason='오늘의 운명이 골라줬어요 🔮 고민 말고 가보세요!';
+ var desc='';
  var naver=result.naver||naverLink(result.name,result.addr);
  var wait=Math.max(0,3000-(Date.now()-t0));
  setTimeout(function(){
@@ -556,7 +507,6 @@ function vHome(){
  return '<div class="scr pad"><div class="edge"></div>'+
  '<div class="top"><div><div class="h1" style="font-size:32px;letter-spacing:-0.05em">나의 맛집 다이어리</div>'+
  '<div class="sub" style="font-size:12px">'+today()+'</div></div>'+
- '<button class="gearbtn" data-act="goSettings" title="설정" aria-label="설정"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 005 15a1.65 1.65 0 00-1.51-1H3.4a2 2 0 010-4H3.5A1.65 1.65 0 005 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09A1.65 1.65 0 0015 4.6a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019 9a1.65 1.65 0 001.51 1H20.6a2 2 0 010 4h-.09A1.65 1.65 0 0019 15z"/></svg></button>'+
  '</div><div class="rule"></div>'+
  '<button class="memo dark" data-act="goSave"><div class="mt"><span class="eyebrow">SAVE</span><b>저장하기</b><span class="d">찍거나, 쓰거나, 사진을 올려요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>'+
  '<button class="memo card" data-act="goFind"><div class="mt"><span class="eyebrow">PULL OUT</span><b>꺼내기</b><span class="d">저장한 '+n+'곳 | 내 주변부터</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg></button>'+
@@ -657,22 +607,7 @@ function vPin(){
  '<div class="sub" id="pinAddr" style="flex:none;min-height:36px">지도를 움직여 가게 위치에 동그라미를 맞춰 주세요</div>'+
  '<button class="btn" data-act="pinOk">이 위치로 정하기</button></div>';
 }
-function vSettings(){
- var p=getProfile()||{};
- var bOpts=['','A','B','O','AB'].map(function(b){return '<option value="'+b+'"'+(p.blood===b?' selected':'')+'>'+(b||'선택 안함')+'</option>'}).join('');
- return '<div class="scr" style="overflow-y:auto"><div class="edge"></div>'+back()+
- '<div><div class="eyebrow">SETTINGS / PROFILE</div><div class="h1" style="font-size:26px">내 정보</div></div>'+
- '<div class="sub" style="font-size:12px">운명의 랜덤픽에서 별자리·바이오리듬 등을 분석해 맛집을 골라줄 때 사용돼요</div>'+
- '<div class="spec">'+
-  srow('이 름','<input id="pfName" value="'+esc(p.name||'')+'" placeholder="이름">')+
-  srow('생년월일','<input id="pfBirth" type="date" value="'+esc(p.birth||'')+'">')+
-  srow('태어난 시간','<input id="pfTime" type="time" value="'+esc(p.time||'')+'">')+
-  srow('혈액형','<select id="pfBlood">'+bOpts+'</select>')+
-  srow('MBTI','<input id="pfMbti" value="'+esc(p.mbti||'')+'" placeholder="예: ENFP" maxlength="4" style="text-transform:uppercase">')+
- '</div>'+
- '<div class="grow"></div><button class="btn" data-act="pfSave">저장</button></div>';
-}
-var VIEWS={home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin,review:vReview,pick:vPick,settings:vSettings};
+var VIEWS={home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin,review:vReview,pick:vPick};
 
 /* ---------- maps (네이버 지도 → 없으면 OpenStreetMap) ---------- */
 function mkMap(id,center,zoom){
@@ -938,12 +873,6 @@ document.addEventListener('click',function(e){
   case 'back':history.back();break;
   case 'goSave':S.editMode=false;if(S.screen==='find'){killMap();S.screen='save';S.stack=['home'];render()}else{S.query='';S.fillId=null;go('save')}break;
   case 'goFind':S.q='';S.chip='near';S.hl=null;S.sheetFull=false;go('find');break;
-  case 'goSettings':go('settings');break;
-  case 'pfSave':
-   var nm=($('#pfName')||{}).value||'',bd=($('#pfBirth')||{}).value||'',tm=($('#pfTime')||{}).value||'',bl=($('#pfBlood')||{}).value||'',mb=(($('#pfMbti')||{}).value||'').trim().toUpperCase();
-   saveProfile({name:nm.trim(),birth:bd,time:tm,blood:bl,mbti:mb});
-   toast('저장했어요');history.back();
-   break;
   case 'install':if(S.installEv){S.installEv.prompt();S.installEv=null;render()}break;
   case 'find':doFind();break;
   case 'camShot':$('#fCam').click();break;
