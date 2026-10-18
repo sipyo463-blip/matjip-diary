@@ -412,14 +412,14 @@ async function destinyPick(excludeId){
   var el=$('#destinyName');if(el)el.textContent=a[Math.floor(Math.random()*a.length)].name;
  },100);
  var prof=getProfile();
- var result=null,reason='';
+ var result=null,reason='',desc='';
  if(prof&&prof.birth){
   try{
    if(!S.pos)await locate();
    if(S.pos&&!S.weather)S.weather=await fetchWeather(S.pos.lat,S.pos.lng);
    var bio=biorhythm_(prof.birth);
    var body={destiny:{
-    cands:a.map(function(c){return {id:c.id,name:c.name,cat:cat(c.name),dist:c._d}}),
+    cands:a.map(function(c){return {id:c.id,name:c.name,cat:cat(c.name),dist:c._d,addr:c.addr}}),
     name:prof.name||'',zodiac:zodiacSign_(prof.birth),mbti:(prof.mbti||'').toUpperCase(),blood:prof.blood||'',
     birthTime:prof.time||'',
     biorhythm:bio?('신체 '+bio.p+'%, 감정 '+bio.e+'%, 지성 '+bio.i+'%'):'',
@@ -428,16 +428,17 @@ async function destinyPick(excludeId){
    }};
    var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
    var j=await r.json();
-   if(j&&j.id){var m=a.find(function(x){return String(x.id)===String(j.id)});if(m){result=m;reason=j.reason||''}}
+   if(j&&j.id){var m=a.find(function(x){return String(x.id)===String(j.id)});if(m){result=m;reason=j.reason||'';desc=j.desc||''}}
   }catch(e){}
  }
  if(!result){result=a[Math.floor(Math.random()*a.length)];reason=reason||'오늘의 운명이 골라줬어요 🔮 고민 말고 가보세요!'}
+ var naver=result.naver||naverLink(result.name,result.addr);
  var wait=Math.max(0,3000-(Date.now()-t0));
  setTimeout(function(){
   clearInterval(iv);
   if(S.destinyTok!==spinId)return;
   S.destinySpin=false;
-  S.pickRanked=[{place:result,reason:reason}];
+  S.pickRanked=[{place:result,reason:reason,desc:desc,naver:naver}];
   render();
  },wait);
 }
@@ -526,7 +527,9 @@ function vPick(){
   return '<button class="row" data-act="pickOpen" data-i="'+i+'" style="align-items:flex-start">'+
    '<div class="pn sm" style="flex:none;margin-top:2px">'+(i+1)+'</div>'+th+
    '<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+(p._d!=null?' · '+fmt(p._d):'')+'</div>'+
-   (r.reason?'<div class="sub" style="margin-top:4px;white-space:normal">💬 '+esc(r.reason)+'</div>':'')+'</div></button>';
+   (r.desc?'<div class="sub" style="margin-top:4px;white-space:normal">'+esc(r.desc)+'</div>':'')+
+   (r.reason?'<div class="sub" style="margin-top:4px;white-space:normal">💬 '+esc(r.reason)+'</div>':'')+'</div></button>'+
+   (r.naver?'<a class="nvl" href="'+esc(r.naver)+'" target="_blank" rel="noopener" style="margin-top:6px">N 네이버에서 리뷰 보기</a>':'');
  }).join('');
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">오늘은 여기 어때요?</div></div></div>'+

@@ -170,11 +170,13 @@ function destiny_(p) {
     (p.time ? '- 현재 시간대: ' + p.time + '\n' : '') +
     (p.weather ? '- 현재 날씨: ' + p.weather + '\n' : '') +
     '\n위 정보(별자리, MBTI, 혈액형, 바이오리듬, 시간대, 날씨)를 재미있게 엮어서 오늘 "운명적으로" 가장 잘 맞는 곳을 후보 중 딱 한 곳만 골라 주세요. ' +
-    '시간대에 안 맞는 곳(예: 아침에 술집)은 고르지 마세요. 과학적 사실이 아니어도 괜찮으니 운세처럼 재미있게 이유를 쓰세요. ' +
-    '정확히 아래 형식으로만, 다른 말 없이 답하세요. REASON은 80자 이내 한두 문장, 존댓말로 운세스럽게 써 주세요:\n' +
-    'ID: <고른 id>\nREASON: <운명적인 이유>';
+    '시간대에 안 맞는 곳(예: 아침에 술집)은 고르지 마세요. 과학적 사실이 아니어도 괜찮으니 운세처럼 재미있게 이유를 쓰세요(헛소리 환영, 진지할 필요 없음). ' +
+    '정확히 아래 형식으로만, 다른 말 없이 답하세요:\n' +
+    'ID: <고른 id>\n' +
+    'DESC: <그 가게가 어떤 곳인지 20~40자 내외로 짧게 설명>\n' +
+    'REASON: <사용자 정보를 엮어 운명적으로 왜 이 집을 골랐는지, 80자 이내 한두 문장, 존댓말, 운세스럽고 재밌게>';
   var body = {
-    model: 'claude-haiku-5-5', max_tokens: 400,
+    model: 'claude-haiku-5-5', max_tokens: 1024,
     messages: [{ role: 'user', content: [{ type: 'text', text: q }] }]
   };
   var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
@@ -188,11 +190,20 @@ function destiny_(p) {
   var raw = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
   var clean = raw.replace(/[*_`#]/g, '');
   var idm = clean.match(/ID\s*:\s*([^\n\r]+)/i);
+  var dem = clean.match(/DESC\s*:\s*([^\n\r]+)/i);
   var rem = clean.match(/REASON\s*:\s*([^\n\r]+)/i);
-  if (!idm) return { error: 'no id', raw: raw.slice(0, 300), full: JSON.stringify(parsed).slice(0, 500) };
+  if (!idm) return { error: 'no id', raw: raw.slice(0, 300) };
   var id = idm[1].replace(/["'\s]/g, '').trim();
-  if (!cands.some(function (c) { return String(c.id) === id; })) return { error: 'bad id', raw: raw.slice(0, 300) };
-  return { id: id, reason: rem ? rem[1].trim().slice(0, 80) : '' };
+  var picked = null;
+  for (var i = 0; i < cands.length; i++) { if (String(cands[i].id) === id) { picked = cands[i]; break; } }
+  if (!picked) return { error: 'bad id', raw: raw.slice(0, 300) };
+  var naverUrl = 'https://map.naver.com/p/search/' + encodeURIComponent(picked.name + (picked.addr ? ' ' + picked.addr : ''));
+  return {
+    id: id,
+    desc: dem ? dem[1].trim().slice(0, 60) : '',
+    reason: rem ? rem[1].trim().slice(0, 100) : '',
+    naverUrl: naverUrl
+  };
 }
 
 function sign_(model, k, m) {
