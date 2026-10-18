@@ -408,7 +408,7 @@ function vDetail(){
  var spec=function(k,v){return '<div class="r"><div class="k">'+k+'</div><div class="v"></div><div>'+v+'</div></div>'};
  var srcL={camera:'촬영',album:'앨범 사진',name:'이름 입력',remote:'이름 입력',sheet:'시트에서 가져옴'}[p.src]||'';
  return '<div class="scr"><div class="edge"></div><div class="top" style="align-items:center">'+back()+'<button class="chip" data-act="edit">정보 수정</button></div>'+
- (p.photo?'<div class="ph" style="background-image:url('+p.photo+')"><em>'+(p.thumb?(p.thumb==='naver'?'네이버 지도':'지도')+' 썸네일':'저장할 때 찍은 사진')+'</em></div>':'')+
+ (p.photo?'<div class="ph" style="background-image:url('+p.photo+')"><em>'+(p.thumb?'네이버 검색 사진 · 실제 매장과 다를 수 있어요':'저장할 때 찍은 사진')+'</em></div>':'')+
  '<div><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><div class="h1" style="font-size:32px">'+esc(p.name)+'</div></div>'+
  (p.needsAddr?'<div class="warn"><span>위치가 아직 없어요</span><button data-act="fill">주소 채우기</button></div>':'')+
  '<div class="spec">'+spec('주 소',esc(p.addr||'-'))+
@@ -572,9 +572,9 @@ function finishSave(msg){S.query='';S.memo='';S.photo=null;S.photoGps=null;S.can
 async function confirmSave(){
  var c=S.cands[S.sel];if(!c)return;
  if(S.editMode&&S.draft){var d=S.draft;d.addr=c.addr;d.lat=c.lat;d.lng=c.lng;d.q=c.name;d.loc=true;S.editMode=false;S.fillId=null;S.cands=[];toast('위치를 골랐어요. 저장을 눌러 확정해요');history.back();return}
- if(S.fillId){var p=byId(S.fillId);if(p){p.lat=c.lat;p.lng=c.lng;p.addr=c.addr;p.needsAddr=false;if(S.memo)p.memo=S.memo;if(!p.photo&&S.photo)p.photo=S.photo;persist();if(!p.photo&&!c.approx){var tf=await mapThumb(c.lat,c.lng);if(tf){p.photo=tf.img;p.thumb=tf.from;persist()}}}
+ if(S.fillId){var p=byId(S.fillId);if(p){p.lat=c.lat;p.lng=c.lng;p.addr=c.addr;p.needsAddr=false;if(S.memo)p.memo=S.memo;if(!p.photo&&S.photo)p.photo=S.photo;persist();if(!p.photo){var tf=await foodThumb(p.name,c.addr);if(tf){p.photo=tf.img;p.thumb=tf.from;persist()}}}
   var id=S.fillId;S.query='';S.memo='';S.cands=[];S.fillId=null;toast('위치를 채웠어요');S.openId=id;S.stack=['home'];S.screen='detail';render();return}
- var th=null;if(!S.photo&&!c.approx){toast('지도 썸네일을 가져오는 중…');th=await mapThumb(c.lat,c.lng)}
+ var th=null;if(!S.photo){toast('음식점 사진을 찾는 중…');th=await foodThumb(c.name,c.addr)}
  addPlace({name:c.name,addr:c.addr,lat:c.lat,lng:c.lng,memo:S.memo,src:S.src,photo:S.photo||(th&&th.img)||null,thumb:(!S.photo&&th)?th.from:null});
  finishSave();
 }
@@ -585,33 +585,28 @@ async function saveHere(){
  if(!g&&!(S.query||'').trim()){toast('이름을 적어 주세요');return}
  var addr='',lat=null,lng=null;
  if(g){lat=g.lat;lng=g.lng;var r=await rev(lat,lng);addr=r?r.addr:''}
- var th2=null;if(!S.photo&&g)th2=await mapThumb(lat,lng);
+ var th2=null;if(!S.photo&&(S.query||'').trim())th2=await foodThumb(name,addr);
  addPlace({name:name,addr:addr,lat:lat,lng:lng,memo:S.memo,src:S.src,photo:S.photo||(th2&&th2.img)||null,thumb:(!S.photo&&th2)?th2.from:null,needsAddr:!g});
  finishSave(g?'현재 위치로 저장했어요':'이름만 저장했어요. 나중에 위치를 채워요');
 }
-/* ---------- 지도 썸네일 (사진 없이 저장할 때) ---------- */
-function tileXY(lat,lng,z){var n=Math.pow(2,z),r=lat*Math.PI/180;return {x:(lng+180)/360*n,y:(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n}}
-function loadTile(z,x,y){return new Promise(function(res){var im=new Image();im.crossOrigin='anonymous';im.onload=function(){res(im)};im.onerror=function(){res(null)};im.src='https://tile.openstreetmap.org/'+z+'/'+x+'/'+y+'.png'})}
-async function osmThumb(lat,lng){
- var z=17,t=tileXY(lat,lng,z),tx=Math.floor(t.x),ty=Math.floor(t.y),W=240;
- var c=document.createElement('canvas');c.width=c.height=W;var g=c.getContext('2d');g.fillStyle='#E0D6BE';g.fillRect(0,0,W,W);
- var ox=W/2-(t.x-tx)*256,oy=W/2-(t.y-ty)*256,jobs=[],ok=0;
- for(var dx=-1;dx<=1;dx++)for(var dy=-1;dy<=1;dy++)(function(dx,dy){jobs.push(loadTile(z,tx+dx,ty+dy).then(function(im){if(im){g.drawImage(im,ox+dx*256,oy+dy*256);ok++}}))})(dx,dy);
- await Promise.all(jobs);if(!ok)return null;
- g.beginPath();g.arc(W/2,W/2,10,0,6.2832);g.fillStyle='#9A5B3E';g.fill();g.lineWidth=3;g.strokeStyle='#F5EFDF';g.stroke();
- try{return c.toDataURL('image/jpeg',.72)}catch(e){return null}
-}
-async function mapThumb(lat,lng){
- if(lat==null)return null;
- if(PLACE_PROXY){try{var r=await fetch(PLACE_PROXY+(PLACE_PROXY.indexOf('?')<0?'?':'&')+'map='+lat+','+lng);var j=await r.json();if(j&&j.img)return {img:j.img,from:'naver'}}catch(e){}}
- var o=await osmThumb(lat,lng);return o?{img:o,from:'osm'}:null;
+/* ---------- 음식점 사진 썸네일 (사진 없이 저장할 때, 네이버 이미지 검색) ---------- */
+function dongOf(addr){var m=String(addr||'').match(/([가-힣0-9]+(?:동|읍|면|가))(?:\s|$)/);return m?m[1]:''}
+async function foodThumb(name,addr){
+ if(!PLACE_PROXY||!name)return null;
+ var q=(String(name).trim()+' '+dongOf(addr)+' 맛집').replace(/\s+/g,' ').trim();
+ try{var r=await fetch(PLACE_PROXY+(PLACE_PROXY.indexOf('?')<0?'?':'&')+'img='+encodeURIComponent(q));var j=await r.json();if(j&&j.img)return {img:j.img,from:'img'}}catch(e){}
+ return null;
 }
 var thumbBusy={};
 function ensureThumb(p){
- if(!p||p.lat==null||p.photo||thumbBusy[p.id])return;
+ if(!p||p.photo&&p.thumb!=='osm'&&p.thumb!=='naver'||thumbBusy[p.id])return;
+ if(p.photo){p.photo=null;p.thumb=null;persist()}
+ if(p.thumbTry&&Date.now()-p.thumbTry<86400000)return;
  thumbBusy[p.id]=1;
- mapThumb(p.lat,p.lng).then(function(t){
-  if(t&&!p.photo){p.photo=t.img;p.thumb=t.from;persist();if(S.screen==='detail'&&S.openId===p.id)render()}
+ foodThumb(p.name,p.addr).then(function(t){
+  p.thumbTry=Date.now();
+  if(t&&!p.photo){p.photo=t.img;p.thumb=t.from}
+  persist();if(S.screen==='detail'&&S.openId===p.id)render();
  }).catch(function(){});
 }
 function pinMap(){
@@ -653,9 +648,9 @@ async function eSave(){
   if(g){lat=g.lat;lng=g.lng;msg='수정했어요. 주소로 지도 위치도 다시 찾았어요'}
   else msg='글자만 수정했어요. 지도 위치는 그대로예요'
  }
- var moved=(lat!==p.lat||lng!==p.lng);
+ var moved=(lat!==p.lat||lng!==p.lng),nameChanged=(name!==p.name);
  p.name=name;p.addr=addr;p.memo=d.memo||'';p.lat=lat;p.lng=lng;p.needsAddr=(lat==null);
- if(moved&&(!p.photo||p.thumb)){p.photo=null;p.thumb=null;if(lat!=null){var te=await mapThumb(lat,lng);if(te){p.photo=te.img;p.thumb=te.from}}}
+ if((moved||nameChanged)&&(!p.photo||p.thumb)){p.photo=null;p.thumb=null;p.thumbTry=null;if(name){var te=await foodThumb(name,addr);if(te){p.photo=te.img;p.thumb=te.from}}}
  persist();toast(msg);history.back();
 }
 document.addEventListener('click',function(e){
