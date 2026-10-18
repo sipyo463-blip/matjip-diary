@@ -87,14 +87,25 @@ function doPost(e) {
     if (!m) return out_({ error: 'bad image' });
     var k = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_KEY');
     if (!k) return out_({ error: 'missing ANTHROPIC_KEY' });
+    // 1차 Haiku(저렴), 못 읽으면 2차 Sonnet(정확)
+    var a = sign_('claude-haiku-5-5', k, m);
+    if (a.error || !a.name) {
+      var s2 = sign_('claude-sonnet-5-5', k, m);
+      if (!s2.error) return out_({ name: s2.name, raw: s2.raw, model: 'sonnet' });
+      if (a.error) return out_({ error: s2.error });
+    }
+    return out_({ name: a.name || '', raw: a.raw, model: 'haiku' });
+  } catch (err) { return out_({ error: 'ocr failed' }); }
+}
+
+function sign_(model, k, m) {
     var q = '사진 속에서 음식점 간판(상호)을 찾아 가게 이름을 읽어 주세요. 사진이 어둡거나 휴대폰 화면 캡처여도 간판 글자가 보이면 최대한 읽으세요. 지점명(예: 부평점)이 보이면 함께 적으세요. 설명 없이 가게 이름 한 줄만 답하세요. 예: 계림원 누룽지통닭구이 부평점. 간판 글자가 전혀 없을 때만 NONE 이라고 답하세요.';
-    var body = { model: 'claude-sonnet-5-5', max_tokens: 60, messages: [{ role: 'user', content: [
+    var body = { model: model, max_tokens: 60, messages: [{ role: 'user', content: [
       { type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } }, { type: 'text', text: q }] }] };
     var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', { method: 'post', contentType: 'application/json',
       headers: { 'x-api-key': k, 'anthropic-version': '2023-06-01' }, payload: JSON.stringify(body), muteHttpExceptions: true });
-    if (r.getResponseCode() !== 200) return out_({ error: 'api ' + r.getResponseCode() });
+    if (r.getResponseCode() !== 200) return { error: 'api ' + r.getResponseCode() };
     var raw = String((((JSON.parse(r.getContentText()).content || [])[0]) || {}).text || '');
     var t = raw.split('\n').map(function (s) { return s.replace(/[*"'`]/g, '').trim(); }).filter(function (s) { return s; })[0] || '';
-    return out_({ name: /^NONE/i.test(t) ? '' : t, raw: raw.slice(0, 80) });
-  } catch (err) { return out_({ error: 'ocr failed' }); }
+    return { name: /^NONE/i.test(t) ? '' : t, raw: raw.slice(0, 80) };
 }
