@@ -185,11 +185,12 @@ function destiny_(p) {
   if (r.getResponseCode() !== 200) return { error: 'api ' + r.getResponseCode() };
   var cs = JSON.parse(r.getContentText()).content || [];
   var raw = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
-  var idm = raw.match(/ID:\s*([^\n\r]+)/i);
-  var rem = raw.match(/REASON:\s*([^\n\r]+)/i);
-  if (!idm) return { error: 'no id' };
-  var id = idm[1].replace(/[*"'`]/g, '').trim();
-  if (!cands.some(function (c) { return String(c.id) === id; })) return { error: 'bad id' };
+  var clean = raw.replace(/[*_`#]/g, '');
+  var idm = clean.match(/ID\s*:\s*([^\n\r]+)/i);
+  var rem = clean.match(/REASON\s*:\s*([^\n\r]+)/i);
+  if (!idm) return { error: 'no id', raw: raw.slice(0, 300) };
+  var id = idm[1].replace(/["'\s]/g, '').trim();
+  if (!cands.some(function (c) { return String(c.id) === id; })) return { error: 'bad id', raw: raw.slice(0, 300) };
   return { id: id, reason: rem ? rem[1].trim().slice(0, 80) : '' };
 }
 
