@@ -11,7 +11,7 @@
  * 키는 코드에 적지 않고 '스크립트 속성'에만 넣습니다.
  */
 function doGet(e) {
-  // 음식점 사진: ?img=검색어  (네이버 이미지 검색 API, 같은 NAVER_ID / NAVER_SECRET 사용)
+  // 음식점 사진: ?img=검색어  (네이버 이미지 검색 API, 스크립트 속성 IMG_ID / IMG_SECRET 사용)
   if (e && e.parameter && e.parameter.img) return imgThumb_(String(e.parameter.img).trim());
   var q = ((e && e.parameter && e.parameter.q) || '').trim();
   if (!q) return out_({ items: [] });
@@ -57,8 +57,9 @@ function out_(obj) {
 function imgThumb_(q) {
   if (!q) return out_({ error: 'empty' });
   var props = PropertiesService.getScriptProperties();
-  var id = props.getProperty('NAVER_ID'), secret = props.getProperty('NAVER_SECRET');
-  if (!id || !secret) return out_({ error: 'missing keys' });
+  // 이미지 검색은 별도 Application 키(IMG_ID / IMG_SECRET)를 사용
+  var id = props.getProperty('IMG_ID'), secret = props.getProperty('IMG_SECRET');
+  if (!id || !secret) return out_({ error: 'missing img keys' });
   var hdr = { 'X-NCP-APIGW-API-KEY-ID': id, 'X-NCP-APIGW-API-KEY': secret };
   var res = UrlFetchApp.fetch('https://naverapihub.apigw.ntruss.com/search/v1/image?display=5&filter=large&sort=sim&query=' + encodeURIComponent(q),
     { headers: hdr, muteHttpExceptions: true });
