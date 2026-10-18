@@ -84,6 +84,7 @@ function doPost(e) {
   try {
     var b = JSON.parse(e.postData.contents || '{}');
     if (b.pick) return out_(pick_(b.pick));
+    if (b.destiny) return out_(destiny_(b.destiny));
     var m = String(b.ocr || '').match(/^data:(image\/[a-z+]+);base64,(.+)$/);
     if (!m) return out_({ error: 'bad image' });
     var k = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_KEY');
@@ -147,6 +148,49 @@ function pick_(p) {
     for (var j = 0; j < n; j++) items.push({ id: pool[j].id, reason: '' });
   }
   return { items: items };
+}
+
+// 운명의 랜덤픽: 별자리/MBTI/혈액형/바이오리듬/시간/날씨를 바탕으로 Haiku가 저장된 맛집 중 한 곳을 골라줌
+function destiny_(p) {
+  var k = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_KEY');
+  if (!k) return { error: 'missing ANTHROPIC_KEY' };
+  var cands = p.cands || [];
+  if (!cands.length) return { error: 'no candidates' };
+  var lines = cands.map(function (c) {
+    return c.id + ' | ' + c.name + ' | ' + (c.cat || '') + ' | ' + (c.dist != null ? Math.round(c.dist) + 'm' : '');
+  }).join('\n');
+  var q = '당신은 재미있는 운세 기반 맛집 추천가입니다. 아래는 사용자가 저장해 둔 맛집 후보 목록입니다 (형식: id | 가게이름 | 종류 | 거리).\n' + lines +
+    '\n\n사용자 정보:\n' +
+    (p.name ? '- 이름: ' + p.name + '\n' : '') +
+    (p.zodiac ? '- 별자리: ' + p.zodiac + '\n' : '') +
+    (p.mbti ? '- MBTI: ' + p.mbti + '\n' : '') +
+    (p.blood ? '- 혈액형: ' + p.blood + '형\n' : '') +
+    (p.birthTime ? '- 태어난 시간: ' + p.birthTime + '\n' : '') +
+    (p.biorhythm ? '- 오늘의 바이오리듬: ' + p.biorhythm + '\n' : '') +
+    (p.time ? '- 현재 시간대: ' + p.time + '\n' : '') +
+    (p.weather ? '- 현재 날씨: ' + p.weather + '\n' : '') +
+    '\n위 정보(별자리, MBTI, 혈액형, 바이오리듬, 시간대, 날씨)를 재미있게 엮어서 오늘 "운명적으로" 가장 잘 맞는 곳을 후보 중 딱 한 곳만 골라 주세요. ' +
+    '시간대에 안 맞는 곳(예: 아침에 술집)은 고르지 마세요. 과학적 사실이 아니어도 괜찮으니 운세처럼 재미있게 이유를 쓰세요. ' +
+    '정확히 아래 형식으로만, 다른 말 없이 답하세요. REASON은 80자 이내 한두 문장, 존댓말로 운세스럽게 써 주세요:\n' +
+    'ID: <고른 id>\nREASON: <운명적인 이유>';
+  var body = {
+    model: 'claude-haiku-5-5', max_tokens: 400,
+    messages: [{ role: 'user', content: [{ type: 'text', text: q }] }]
+  };
+  var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+    method: 'post', contentType: 'application/json',
+    headers: { 'x-api-key': k, 'anthropic-version': '2023-06-01' },
+    payload: JSON.stringify(body), muteHttpExceptions: true
+  });
+  if (r.getResponseCode() !== 200) return { error: 'api ' + r.getResponseCode() };
+  var cs = JSON.parse(r.getContentText()).content || [];
+  var raw = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
+  var idm = raw.match(/ID:\s*([^\n\r]+)/i);
+  var rem = raw.match(/REASON:\s*([^\n\r]+)/i);
+  if (!idm) return { error: 'no id' };
+  var id = idm[1].replace(/[*"'`]/g, '').trim();
+  if (!cands.some(function (c) { return String(c.id) === id; })) return { error: 'bad id' };
+  return { id: id, reason: rem ? rem[1].trim().slice(0, 80) : '' };
 }
 
 function sign_(model, k, m) {
