@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#EBE3D0">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -14,7 +14,7 @@
 :root{--paper:#EBE3D0;--card:#F5EFDF;--ink:#3E352B;--sub:#8C7F6B;--line:#CDBFA6;--stamp:#9A5B3E;--chip:#E3D8C0;--kraft:#B8975F;--ph:#B3A58C}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:#D9CFB8}
-body{font-family:'Noto Sans KR',-apple-system,sans-serif;color:var(--ink);letter-spacing:-0.01em;overscroll-behavior:none}
+body{font-family:'Noto Sans KR',-apple-system,sans-serif;color:var(--ink);letter-spacing:-0.01em;overscroll-behavior:none;touch-action:pan-x pan-y}
 button,input,textarea{font:inherit;color:inherit;letter-spacing:inherit}
 button{border:0;background:none;padding:0;cursor:pointer}
 #app{max-width:480px;height:100dvh;margin:0 auto;position:relative;overflow:hidden;background:var(--paper)}
@@ -90,7 +90,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .empty{text-align:center;color:var(--sub);font-size:14px;line-height:1.7;padding:30px 10px}
 
 /* maps */
-.mapbox{position:relative;flex:1;min-height:150px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#E0D6BE}
+.mapbox{position:relative;flex:1;min-height:150px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#E0D6BE;touch-action:none}
 .mapbox>#cmap,#fmap,#cmap{position:absolute!important;inset:0!important}
 .leaflet-container{background:#E0D6BE;font-family:inherit}
 .leaflet-tile-pane{filter:sepia(.55) saturate(.55) contrast(.92) brightness(1.04)}
@@ -99,10 +99,13 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .pn.sm{width:22px;height:22px}
 .me{width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:0 0 0 7px rgba(62,53,43,.14)}
 .melab{position:absolute;left:10px;top:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
+.locbtn{position:absolute;right:12px;width:42px;height:42px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(62,53,43,.22);z-index:600;color:var(--ink)}
+.locbtn .ic{width:20px;height:20px}
 
 #fmap.nv img,#cmap.nv img{filter:sepia(.28) saturate(.8)}
 /* find */
 .fwrap{position:absolute;inset:0;background:var(--paper)}
+#fmap{touch-action:none}
 #fmap{inset:0 0 46% 0!important}
 .fsearch{position:absolute;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 14px);z-index:600;display:flex;flex-direction:column;gap:8px}
 .chips{display:flex;gap:8px}
@@ -350,6 +353,10 @@ function moodPick(i){
  render()
 }
 function pickReroll(){if(S.pickList.length>1){S.pickIdx=(S.pickIdx+1)%S.pickList.length;render()}}
+async function myLoc(){
+ var p=await locate();if(!p){toast('위치를 확인할 수 없어요');return}
+ if(S.map&&S.screen==='find')mView(S.map,p.lat,p.lng,16);
+}
 function vPick(){
  var w=S.weather,wd=w?wxDesc(w.code):'';
  var wline=w?('<div class="sub" style="font-size:12px">'+(w.temp!=null?Math.round(w.temp)+'℃ · ':'')+wd+'</div>'):'<div class="sub" style="font-size:12px">날씨를 확인하는 중…</div>';
@@ -446,6 +453,7 @@ function vFind(){
  '<div class="fsearch"><div class="field" style="height:50px"><input id="qFind" value="'+esc(S.q)+'" placeholder="이름·동네·메모 검색" autocomplete="off"></div>'+
  '<div class="chips" id="chips"></div></div>'+
  '<div class="sheet"><div class="grab"></div><div class="sh"><b>가까운 맛집</b><span class="sub" id="cnt"></span></div><div class="list grow" id="plist"></div>'+
+ '<button class="locbtn" data-act="myLoc" style="bottom:calc(46% + 14px)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
  '<div class="tabs"><button data-act="goSave">저장</button><button class="on">꺼내기</button></div></div></div>';
 }
 function vDetail(){
@@ -770,6 +778,7 @@ document.addEventListener('click',function(e){
   case 'ePin':S.pinFor='edit';S.pinAddr='';go('pin');break;
   case 'eSave':eSave();break;
   case 'pinOk':pinOk();break;
+  case 'myLoc':myLoc();break;
   case 'fill':var p=byId(S.openId);S.editMode=false;S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
   case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';go('find');break;
   case 'copy':var c=byId(S.openId);copy(c.addr||c.name);break;
