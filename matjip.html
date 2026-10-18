@@ -601,7 +601,7 @@ function vConfirm(){
  rows+none+
  (hasMap?'<div class="mapbox"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.gpsFrom==='device'?'찍은 위치':S.photoGps&&S.gpsFrom==='pin'?'고른 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
  '<div class="two" style="flex:none">'+(S.editMode?'':'<div class="field" style="flex:1;font-size:14px"><input id="qMemo" value="'+esc(S.memo)+'" placeholder="메모 (선택)"></div>')+(S.cands.length?'<button class="btn" style="'+(S.editMode?'':'width:110px;flex:none')+'" data-act="confirmSave">'+(S.editMode?'이 위치로 바꾸기':'저장')+'</button>':'')+'</div>'+
- (S.fillId?'':'<button class="link" data-act="saveHere">'+alt+'</button>')+'</div>';
+ '<button class="link" data-act="saveHere">'+alt+'</button></div>';
 }
 function vFind(){
  return '<div class="fwrap"><div id="fmap"></div>'+
@@ -822,14 +822,13 @@ async function confirmSave(){
  S.rv=rv;go('review');
 }
 async function saveHere(){
- var g=null;
- if(S.fillId){toast('이름과 동네를 다시 적어 주세요');return}
- var name=(S.query||'').trim()||'이름 미정 '+dateLabel(Date.now());
- if(!g&&!(S.query||'').trim()){toast('이름을 적어 주세요');return}
- var addr='',lat=null,lng=null;
- if(g){lat=g.lat;lng=g.lng;var r=await rev(lat,lng);addr=r?r.addr:''}
- var rv={name:name,addr:addr,lat:lat,lng:lng,memo:S.memo||'',src:S.src,photo:S.photo||null,thumb:null,fillId:null,mine:!!S.photo,noLoc:!g};
- if(!rv.photo&&(S.query||'').trim()){toast('음식점 사진을 찾는 중…');var th=await foodThumb(name,addr);if(th){rv.photo=th.img;rv.thumb=th.from}}
+ var fp=S.fillId?byId(S.fillId):null;
+ if(!(S.query||'').trim()){toast('이름을 적어 주세요');return}
+ var name=(S.query||'').trim();
+ // 기존 맛집을 다시 찾다가 못 찾은 경우엔 기존 위치/사진을 그대로 유지해요
+ var addr=fp?(fp.addr||''):'',lat=fp?fp.lat:null,lng=fp?fp.lng:null;
+ var rv={name:name,addr:addr,lat:lat,lng:lng,memo:S.memo||(fp&&fp.memo)||'',src:fp?fp.src:S.src,photo:S.photo||(fp&&fp.photo)||null,thumb:fp?(fp.thumb||null):null,fillId:fp?fp.id:null,mine:!!S.photo,noLoc:(lat==null),naver:fp?(fp.naver||null):null};
+ if(!rv.photo&&name){toast('음식점 사진을 찾는 중…');var th=await foodThumb(name,addr);if(th){rv.photo=th.img;rv.thumb=th.from}}
  S.rv=rv;go('review');
 }
 function vReview(){
