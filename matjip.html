@@ -309,7 +309,7 @@ async function takeFile(file,src){
  try{
   var gps=null;
   try{gps=exifGps(await file.arrayBuffer())}catch(e){}
-  S.dbg={tiff:DBG.tiff,gps:DBG.gps,type:file.type||''};
+  S.dbg={tiff:DBG.tiff,gps:DBG.gps,type:file.type||'',name:file.name||'',size:file.size||0};
   var img=await loadImg(file);
   S.photo=shrink(img,640);S.src=src;
   if(gps){S.photoGps=gps;S.gpsFrom='exif'}
@@ -359,6 +359,7 @@ function locCard(){
  else if(S.src==='album'){t='사진에서 위치를 읽지 못했어요';var d=S.dbg||{};
   s=(!d.tiff?'사진 정보(EXIF)가 없어요. 안드로이드가 앨범에서 고르는 과정에 지웠거나, 메신저로 받은 사진일 수 있어요.':'사진 정보는 있는데 위치가 비어 있어요. 안드로이드가 앨범에서 고르는 과정에 위치를 지운 거예요.')+' 선택창에서 "앨범/최근/이미지" 대신 내장 메모리 → DCIM → Camera로 들어가 고르면 위치가 읽혀요. 안 되면 지도에서 직접 고르면 주소를 찾아 줘요.'}
  else{t='위치를 확인하지 못했어요';s='지도에서 직접 고르거나, 동네와 같이 적어 주세요. 예) 가정동 접시고기'}
+ var dg=S.dbg;if(dg&&!S.photoGps&&S.src==='album')s+=' [받은 파일: '+(dg.name||'이름없음')+' / '+(dg.size/1048576).toFixed(2)+'MB / '+(dg.type||'타입없음')+' / EXIF '+(dg.tiff?'있음':'없음')+' / GPS '+(dg.gps?'있음':'없음')+']';
  var acts='';
  if(!S.photoGps&&S.src==='album')acts+='<label for="fAlb" class="la">갤러리 선택창으로 다시 고르기</label>';
  acts+='<button class="la" data-act="pinPick">'+(S.photoGps?'위치가 달라요 · 지도에서 고르기':'지도에서 위치 고르기')+'</button>';
