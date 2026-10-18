@@ -182,13 +182,14 @@ function destiny_(p) {
     headers: { 'x-api-key': k, 'anthropic-version': '2023-06-01' },
     payload: JSON.stringify(body), muteHttpExceptions: true
   });
-  if (r.getResponseCode() !== 200) return { error: 'api ' + r.getResponseCode() };
-  var cs = JSON.parse(r.getContentText()).content || [];
+  if (r.getResponseCode() !== 200) return { error: 'api ' + r.getResponseCode(), body: r.getContentText().slice(0, 500) };
+  var parsed = JSON.parse(r.getContentText());
+  var cs = parsed.content || [];
   var raw = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
   var clean = raw.replace(/[*_`#]/g, '');
   var idm = clean.match(/ID\s*:\s*([^\n\r]+)/i);
   var rem = clean.match(/REASON\s*:\s*([^\n\r]+)/i);
-  if (!idm) return { error: 'no id', raw: raw.slice(0, 300) };
+  if (!idm) return { error: 'no id', raw: raw.slice(0, 300), full: JSON.stringify(parsed).slice(0, 500) };
   var id = idm[1].replace(/["'\s]/g, '').trim();
   if (!cands.some(function (c) { return String(c.id) === id; })) return { error: 'bad id', raw: raw.slice(0, 300) };
   return { id: id, reason: rem ? rem[1].trim().slice(0, 80) : '' };
