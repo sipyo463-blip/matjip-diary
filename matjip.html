@@ -332,45 +332,52 @@ function pickCands(){
  var a=places.filter(function(p){return p.lat!=null});
  a.forEach(function(p){p._d=S.pos?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null});
  a.sort(function(x,y){return (x._d==null?1e9:x._d)-(y._d==null?1e9:y._d)});
- return a.slice(0,10)
+ return a.slice(0,14)
 }
 async function goPick(){
- S.pickStep=0;S.pickTaste=null;S.pickHunger=null;S.pickFeel=null;
- S.pickList=[];S.pickIdx=0;S.pickReason='';S.pickLoading=false;S.weather=null;
+ S.pickStep=0;S.pickTaste=[];S.pickHunger=[];S.pickFeel=[];
+ S.pickCands=[];S.pickRanked=[];S.pickLoading=false;S.weather=null;
  go('pick');
  if(!S.pos)await locate();
  if(S.pos){S.weather=await fetchWeather(S.pos.lat,S.pos.lng);if(S.screen==='pick')render()}
 }
 function pickChoice(kind,i){
- if(kind==='taste'){S.pickTaste=i;S.pickStep=1;render()}
- else if(kind==='hunger'){S.pickHunger=i;S.pickStep=2;render()}
- else if(kind==='feel'){S.pickFeel=i;runPick()}
+ var arr=kind==='taste'?S.pickTaste:kind==='hunger'?S.pickHunger:S.pickFeel;
+ var p=arr.indexOf(i);
+ if(p>=0)arr.splice(p,1);else arr.push(i);
+ render()
+}
+function pickNext(){
+ if(S.pickStep<2){S.pickStep++;render()}else runPick();
 }
 function pickPrev(){if(S.pickStep>0){S.pickStep--;render()}else{back()}}
 async function runPick(exclude){
  var cands=pickCands();
- if(!cands.length){S.pickStep=3;S.pickList=[];render();return}
+ S.pickCands=cands;
+ if(!cands.length){S.pickStep=3;S.pickRanked=[];render();return}
  S.pickStep=3;S.pickLoading=true;render();
+ var pick=function(a,arr){return arr.length?arr.map(function(i){return a[i]}).join(', '):'상관없음'};
  var body={pick:{
   cands:cands.map(function(c){return {id:c.id,name:c.name,cat:cat(c.name),dist:c._d}}),
-  taste:TASTES[S.pickTaste],hunger:HUNGERS[S.pickHunger],feel:FEELS[S.pickFeel],
+  taste:pick(TASTES,S.pickTaste),hunger:pick(HUNGERS,S.pickHunger),feel:pick(FEELS,S.pickFeel),
   weather:S.weather?((S.weather.temp!=null?Math.round(S.weather.temp)+'℃ ':'')+wxDesc(S.weather.code)):'',
   exclude:exclude||[]
  }};
- var picked=null,reason='';
+ var ranked=[];
  try{
   var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
   var j=await r.json();
-  if(j&&j.id){picked=cands.find(function(c){return String(c.id)===String(j.id)});reason=j.reason||''}
+  if(j&&j.items&&j.items.length){
+   ranked=j.items.map(function(it){var c=cands.find(function(x){return String(x.id)===String(it.id)});return c?{place:c,reason:it.reason||''}:null}).filter(Boolean);
+  }
  }catch(e){}
- if(!picked)picked=cands[0];
- S.pickList=cands;S.pickIdx=cands.indexOf(picked);S.pickReason=reason;S.pickLoading=false;
+ if(!ranked.length)ranked=cands.slice(0,3).map(function(c){return {place:c,reason:''}});
+ S.pickRanked=ranked;S.pickLoading=false;
  if(S.screen==='pick')render();
 }
 function pickReroll(){
  if(S.pickLoading)return;
- var p=S.pickList[S.pickIdx];
- runPick(p?[p.id]:[]);
+ runPick(S.pickRanked.map(function(r){return r.place.id}));
 }
 async function myLoc(){
  var p=await locate();if(!p){toast('위치를 확인할 수 없어요');return}
@@ -383,8 +390,8 @@ function fitAll(){
  if(!pts.length){toast('표시할 장소가 없어요');return}
  mFit(M,pts,[50,40,40,40],17);
 }
-function pickChips(list,act,cur){
- return list.map(function(m,i){return '<button class="memo card" data-act="'+act+'" data-i="'+i+'" style="min-height:56px'+(cur===i?';border-color:var(--ink)':'')+'"><div class="mt"><b style="font-size:17px">'+esc(m)+'</b></div></button>'}).join('')
+function pickChips(list,act,sel){
+ return '<div style="display:flex;flex-wrap:wrap;gap:8px">'+list.map(function(m,i){var on=sel.indexOf(i)>=0;return '<button class="chip'+(on?' on':'')+'" data-act="'+act+'" data-i="'+i+'" style="height:40px">'+esc(m)+'</button>'}).join('')+'</div>'
 }
 function vPick(){
  var w=S.weather,wd=w?wxDesc(w.code):'';
@@ -393,17 +400,20 @@ function vPick(){
  if(step===0){
   return '<div class="scr"><div class="edge"></div>'+back()+
   '<div class="top"><div><div class="eyebrow">PICK FOR ME · 1/3</div><div class="h1" style="font-size:24px">오늘 뭐가 당겨요?</div></div></div>'+
-  wline+pickChips(TASTES,'pTaste',S.pickTaste)+'<div class="grow"></div></div>';
+  wline+'<div class="sub" style="font-size:12px">여러 개 골라도 돼요</div>'+pickChips(TASTES,'pTaste',S.pickTaste)+
+  '<div class="grow"></div><button class="btn" data-act="pickNext">다음</button></div>';
  }
  if(step===1){
   return '<div class="scr"><div class="edge"></div>'+back()+
   '<div class="top"><div><div class="eyebrow">PICK FOR ME · 2/3</div><div class="h1" style="font-size:24px">얼마나 배고파요?</div></div></div>'+
-  pickChips(HUNGERS,'pHunger',S.pickHunger)+'<div class="grow"></div><button class="link" data-act="pickPrev">이전</button></div>';
+  '<div class="sub" style="font-size:12px">여러 개 골라도 돼요</div>'+pickChips(HUNGERS,'pHunger',S.pickHunger)+
+  '<div class="grow"></div><button class="btn" data-act="pickNext">다음</button><button class="link" data-act="pickPrev">이전</button></div>';
  }
  if(step===2){
   return '<div class="scr"><div class="edge"></div>'+back()+
   '<div class="top"><div><div class="eyebrow">PICK FOR ME · 3/3</div><div class="h1" style="font-size:24px">오늘 기분은요?</div></div></div>'+
-  pickChips(FEELS,'pFeel',S.pickFeel)+'<div class="grow"></div><button class="link" data-act="pickPrev">이전</button></div>';
+  '<div class="sub" style="font-size:12px">여러 개 골라도 돼요</div>'+pickChips(FEELS,'pFeel',S.pickFeel)+
+  '<div class="grow"></div><button class="btn" data-act="pickNext">추천받기</button><button class="link" data-act="pickPrev">이전</button></div>';
  }
  // step 3: 로딩 or 결과
  if(S.pickLoading){
@@ -411,22 +421,25 @@ function vPick(){
   '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">AI가 고르는 중…</div></div></div>'+
   '<div class="grow"></div><div class="sub" style="text-align:center">취향에 맞는 곳을 찾고 있어요</div><div class="grow"></div></div>';
  }
- var p=S.pickList[S.pickIdx];
- if(!p){
+ if(!S.pickRanked.length){
   return '<div class="scr"><div class="edge"></div>'+back()+
   '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">추천하기</div></div></div>'+
   wline+'<div class="grow"></div><div class="card" style="padding:18px 16px;text-align:center"><div class="sub">근처에 저장된 맛집이 없어요</div></div><div class="grow"></div>'+
   '<button class="btn line" data-act="goSave">먼저 저장하러 가기</button><button class="link" data-act="back">뒤로</button></div>';
  }
- var th=p.photo?'<div class="ph" style="background-image:url('+p.photo+')"></div>':'';
+ var cards=S.pickRanked.map(function(r,i){
+  var p=r.place;
+  var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
+  return '<button class="row" data-act="pickOpen" data-i="'+i+'" style="align-items:flex-start">'+
+   '<div class="pn sm" style="flex:none;margin-top:2px">'+(i+1)+'</div>'+th+
+   '<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+(p._d!=null?' · '+fmt(p._d):'')+'</div>'+
+   (r.reason?'<div class="sub" style="margin-top:4px;white-space:normal">💬 '+esc(r.reason)+'</div>':'')+'</div></button>';
+ }).join('');
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">오늘은 여기 어때요?</div></div></div>'+
- wline+th+
- '<div><div class="eyebrow">'+esc(cat(p.name))+(p._d!=null?' · '+fmt(p._d):'')+'</div><div class="h1" style="font-size:28px">'+esc(p.name)+'</div><div class="sub">'+esc(p.addr||'')+'</div></div>'+
- (S.pickReason?'<div class="sub" style="margin-top:4px">💬 '+esc(S.pickReason)+'</div>':'')+
+ wline+'<div class="list" style="gap:10px">'+cards+'</div>'+
  '<div class="grow"></div>'+
- '<button class="btn" data-act="pickOpen">이 곳으로 결정</button>'+
- (S.pickList.length>1?'<button class="btn line" data-act="pickReroll">다른 곳 추천</button>':'')+
+ '<button class="btn line" data-act="pickReroll">다른 곳 추천</button>'+
  '<button class="link" data-act="pickPrev">다시 고르기</button></div>';
 }
 
@@ -812,9 +825,10 @@ document.addEventListener('click',function(e){
   case 'pTaste':pickChoice('taste',+t.getAttribute('data-i'));break;
   case 'pHunger':pickChoice('hunger',+t.getAttribute('data-i'));break;
   case 'pFeel':pickChoice('feel',+t.getAttribute('data-i'));break;
+  case 'pickNext':pickNext();break;
   case 'pickPrev':pickPrev();break;
   case 'pickReroll':pickReroll();break;
-  case 'pickOpen':var pp=S.pickList[S.pickIdx];if(pp){S.openId=pp.id;S.hl=pp.id;go('detail')}break;
+  case 'pickOpen':var pr=S.pickRanked[+t.getAttribute('data-i')];if(pr){S.openId=pr.place.id;S.hl=pr.place.id;go('detail')}break;
   case 'albumPick':$('#fPic').click();break;
   case 'reread':rereadSign();break;
   case 'pick':S.sel=+t.getAttribute('data-i');syncConfirm();break;
