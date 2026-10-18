@@ -88,7 +88,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 
 /* maps */
 .mapbox{position:relative;flex:1;min-height:150px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#E0D6BE}
-.mapbox>div,#fmap,#cmap{position:absolute!important;inset:0!important}
+.mapbox>#cmap,#fmap,#cmap{position:absolute!important;inset:0!important}
 .leaflet-container{background:#E0D6BE;font-family:inherit}
 .leaflet-tile-pane{filter:sepia(.55) saturate(.55) contrast(.92) brightness(1.04)}
 .pn{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--paper);border:2px solid var(--paper);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
@@ -140,7 +140,7 @@ input[type=file]{display:none}
 'use strict';
 var APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbwUOS0rfTpwD_8Qx-5lBWxRsHQrKkf-FSbaIE3QN4BHEOWkSx3E1_WsxOr-aGSNApNS/exec';
 var NAVER_KEY='boh1f3rrvv';        // 네이버 클라우드 Maps 클라이언트 ID (비우면 OpenStreetMap으로 대신 표시)
-var PLACE_PROXY='';      // (선택) 네이버 지역검색 프록시 주소
+var PLACE_PROXY='https://script.google.com/macros/s/AKfycbwtN-5l9IHj-IH7f_9mNULCCbE5Rpu09V6PyB9hBo-cu7SZah7As907FpwqwrIC-jst/exec';      // (선택) 네이버 지역검색 프록시 주소
 var NV=false;
 var KEY='matjip_places_v2',IMPORT_KEY='matjip_sheet_imported_v2';
 var $=function(s){return document.querySelector(s)};
