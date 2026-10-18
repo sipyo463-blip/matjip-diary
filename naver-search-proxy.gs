@@ -85,6 +85,7 @@ function doPost(e) {
     var b = JSON.parse(e.postData.contents || '{}');
     if (b.pick) return out_(pick_(b.pick));
     if (b.destiny) return out_(destiny_(b.destiny));
+    if (b.room) return out_(room_(b.room));
     var m = String(b.ocr || '').match(/^data:(image\/[a-z+]+);base64,(.+)$/);
     if (!m) return out_({ error: 'bad image' });
     var k = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_KEY');
@@ -204,6 +205,36 @@ function destiny_(p) {
     reason: rem ? rem[1].trim().slice(0, 100) : '',
     naverUrl: naverUrl
   };
+}
+
+// 친구와 맛집 리스트 공유: 코드(방) 기준으로 Script Properties에 저장/조회
+// save: {code, action:'save', data:[place,...]}  load: {code, action:'load'}
+function room_(p) {
+  var code = String(p.code || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{4,12}$/.test(code)) return { error: 'bad code' };
+  var props = PropertiesService.getScriptProperties();
+  var key = 'ROOM_' + code;
+  if (p.action === 'save') {
+    var data = p.data;
+    if (!Array.isArray(data)) return { error: 'bad data' };
+    // 사진(photo/thumb)은 용량이 커서 공유에서는 제외
+    var slim = data.map(function (d) {
+      return { id: d.id, name: d.name, addr: d.addr, lat: d.lat, lng: d.lng, memo: d.memo, naver: d.naver, visited: !!d.visited, createdAt: d.createdAt };
+    });
+    var json = JSON.stringify(slim);
+    while (json.length > 8500 && slim.length > 1) { slim.pop(); json = JSON.stringify(slim); }
+    if (json.length > 8500) return { error: 'too large' };
+    props.setProperty(key, json);
+    props.setProperty(key + '_AT', String(Date.now()));
+    return { ok: true, count: slim.length, trimmed: slim.length < data.length };
+  }
+  if (p.action === 'load') {
+    var saved = props.getProperty(key);
+    if (!saved) return { error: 'not found' };
+    var at = props.getProperty(key + '_AT');
+    return { items: JSON.parse(saved), updatedAt: at ? Number(at) : null };
+  }
+  return { error: 'bad action' };
 }
 
 function sign_(model, k, m) {
