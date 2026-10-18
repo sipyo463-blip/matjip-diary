@@ -112,7 +112,8 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .chips{display:flex;gap:8px}
 .chip{height:34px;padding:0 14px;border-radius:9px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:700;display:flex;align-items:center}
 .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.sheet{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:600;background:var(--paper);border-radius:14px 14px 0 0;border-top:1px solid var(--line);padding:10px 18px 0;display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 18px rgba(62,53,43,.10)}
+.sheet{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:600;background:var(--paper);border-radius:14px 14px 0 0;border-top:1px solid var(--line);padding:10px 18px 0;display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 18px rgba(62,53,43,.10);transition:height .2s,top .2s}
+.sheet.full{height:auto;top:calc(env(safe-area-inset-top,0px) + 112px)}
 .grab{align-self:center;width:36px;height:4px;border-radius:2px;background:var(--line);flex:none}
 .sh{display:flex;align-items:baseline;justify-content:space-between;flex:none}
 .sh b{font-size:22px;font-weight:700;letter-spacing:-0.03em}
@@ -185,7 +186,7 @@ function ini(n){return esc((String(n).trim()[0]||'맛'))}
 function copy(t){try{navigator.clipboard.writeText(t).then(function(){toast('복사했어요')},fb)}catch(e){fb()}function fb(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('복사했어요')}catch(e){toast('복사하지 못했어요')}a.remove()}}
 
 /* ---------- location / geocoding ---------- */
-var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[]};
+var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetFull:false};
 
 function locate(){
  return new Promise(function(res){
@@ -336,7 +337,7 @@ function pickCands(){
 }
 async function goPick(){
  S.pickStep=0;S.pickTaste=[];S.pickHunger=[];S.pickFeel=[];
- S.pickCands=[];S.pickRanked=[];S.pickLoading=false;S.weather=null;
+ S.pickCands=[];S.pickRanked=[];S.pickLoading=false;S.weather=null;S.pickDestiny=false;
  go('pick');
  if(!S.pos)await locate();
  if(S.pos){S.weather=await fetchWeather(S.pos.lat,S.pos.lng);if(S.screen==='pick')render()}
@@ -359,7 +360,19 @@ function timeOfDay_(){
  if(h>=21&&h<24)return '밤(야식/술자리 시간대)';
  return '새벽(늦은 밤~새벽)';
 }
+function destinyPick(excludeId){
+ if(!places.length){toast('저장된 맛집이 없어요. 먼저 저장해 주세요');return}
+ var a=places.slice();
+ if(excludeId&&a.length>1)a=a.filter(function(p){return p.id!==excludeId});
+ a.forEach(function(p){p._d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null});
+ var pick=a[Math.floor(Math.random()*a.length)];
+ S.pickDestiny=true;
+ S.pickRanked=[{place:pick,reason:'오늘의 운명이 골라줬어요 🔮 고민 말고 가보세요!'}];
+ S.pickStep=1;S.pickLoading=false;
+ render();
+}
 async function runPick(exclude){
+ S.pickDestiny=false;
  var cands=pickCands();
  S.pickCands=cands;
  if(!cands.length){S.pickStep=1;S.pickRanked=[];render();return}
@@ -386,9 +399,10 @@ async function runPick(exclude){
 }
 function pickReroll(){
  if(S.pickLoading)return;
+ if(S.pickDestiny){destinyPick(S.pickRanked[0]&&S.pickRanked[0].place.id);return}
  runPick(S.pickRanked.map(function(r){return r.place.id}));
 }
-function pickRetry(){S.pickStep=0;S.pickRanked=[];render();}
+function pickRetry(){S.pickStep=0;S.pickRanked=[];S.pickDestiny=false;render();}
 async function myLoc(){
  var p=await locate();if(!p){toast('위치를 확인할 수 없어요');return}
  if(S.map&&S.screen==='find')mView(S.map,p.lat,p.lng,16);
@@ -414,7 +428,8 @@ function vPick(){
   '<div class="sub" style="font-size:12px;margin-top:10px">오늘 뭐가 당겨요? · 여러 개 골라도 돼요</div>'+pickChips(TASTES,'pTaste',S.pickTaste)+
   '<div class="sub" style="font-size:12px;margin-top:14px">얼마나 배고파요?</div>'+pickChips(HUNGERS,'pHunger',S.pickHunger)+
   '<div class="sub" style="font-size:12px;margin-top:14px">오늘 기분은요?</div>'+pickChips(FEELS,'pFeel',S.pickFeel)+
-  '<button class="btn" data-act="pickNext" style="margin-top:16px">추천받기</button></div>';
+  '<button class="btn" data-act="pickNext" style="margin-top:16px">추천받기</button>'+
+  '<button class="btn line" data-act="destinyPick" style="margin-top:8px">🔮 운명의 랜덤픽</button></div>';
  }
  // step 1: 로딩 or 결과
  if(S.pickLoading){
@@ -516,7 +531,7 @@ function vFind(){
  '<button class="locbtn" data-act="fitAll" title="전체보기"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 0 1-1v-4"/></svg></button>'+
  '<button class="locbtn" data-act="myLoc" title="내 위치"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
  '</div>'+
- '<div class="sheet"><div class="grab"></div><div class="sh"><b>가까운 맛집</b><span class="sub" id="cnt"></span></div><div class="list grow" id="plist"></div>'+
+ '<div class="sheet'+(S.sheetFull?' full':'')+'"><div class="grab" data-act="toggleFull"></div><div class="sh"><div style="display:flex;align-items:baseline;gap:6px"><b>가까운 맛집</b><span class="sub" id="cnt"></span></div><button class="link" data-act="toggleFull" id="fullBtn" style="font-size:12px">'+(S.sheetFull?'접기':'전체보기')+'</button></div><div class="list grow" id="plist"></div>'+
  '<div class="tabs"><button data-act="goSave">저장</button><button class="on">꺼내기</button></div></div></div>';
 }
 function vDetail(){
@@ -656,6 +671,12 @@ function refreshFind(fit){
    near.length>1?mFit(M,near,[120,30,30,30],16):mView(M,S.pos.lat,S.pos.lng,15);
   }else if(pts.length)mFit(M,pts,[120,30,30,30],16);
  }
+}
+function toggleSheetFull(){
+ S.sheetFull=!S.sheetFull;
+ var sh=document.querySelector('.sheet');if(sh)sh.classList.toggle('full',S.sheetFull);
+ var b=$('#fullBtn');if(b)b.textContent=S.sheetFull?'접기':'전체보기';
+ if(S.sheetFull){var qi=$('#qFind');if(qi)qi.focus()}
 }
 function afterFind(){
  var ctr=S.pos?[S.pos.lat,S.pos.lng]:[37.5665,126.978];
@@ -818,7 +839,7 @@ document.addEventListener('click',function(e){
  switch(a){
   case 'back':history.back();break;
   case 'goSave':S.editMode=false;if(S.screen==='find'){killMap();S.screen='save';S.stack=['home'];render()}else{S.query='';S.fillId=null;go('save')}break;
-  case 'goFind':S.q='';S.chip='near';S.hl=null;go('find');break;
+  case 'goFind':S.q='';S.chip='near';S.hl=null;S.sheetFull=false;go('find');break;
   case 'install':if(S.installEv){S.installEv.prompt();S.installEv=null;render()}break;
   case 'find':doFind();break;
   case 'camShot':$('#fCam').click();break;
@@ -827,6 +848,7 @@ document.addEventListener('click',function(e){
   case 'pHunger':pickChoice('hunger',+t.getAttribute('data-i'));break;
   case 'pFeel':pickChoice('feel',+t.getAttribute('data-i'));break;
   case 'pickNext':pickNext();break;
+  case 'destinyPick':destinyPick();break;
   case 'pickPrev':pickPrev();break;
   case 'pickReroll':pickReroll();break;
   case 'pickRetry':pickRetry();break;
@@ -848,8 +870,9 @@ document.addEventListener('click',function(e){
   case 'pinOk':pinOk();break;
   case 'myLoc':myLoc();break;
   case 'fitAll':fitAll();break;
+  case 'toggleFull':toggleSheetFull();break;
   case 'fill':var p=byId(S.openId);S.editMode=false;S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
-  case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';go('find');break;
+  case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';S.sheetFull=false;go('find');break;
   case 'copy':var c=byId(S.openId);copy(c.addr||c.name);break;
   case 'visit':var v=byId(S.openId);v.visited=!v.visited;persist();render();break;
   case 'del':if(confirm('이 맛집을 삭제할까요?')){places=places.filter(function(x){return x.id!==S.openId});persist();history.back()}break;
