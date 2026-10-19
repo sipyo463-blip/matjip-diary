@@ -139,7 +139,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 #fmap{touch-action:none}
 #fmap{inset:0 0 46% 0!important}
 .fsearch{position:absolute;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 14px);z-index:600;display:flex;flex-direction:column;gap:8px}
-.chips{display:flex;gap:8px}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}.chips .chip{flex:none;white-space:nowrap}
 .chip{height:34px;padding:0 14px;border-radius:9px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:700;display:flex;align-items:center}
 .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .sheet{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:600;background:var(--paper);border-radius:14px 14px 0 0;border-top:1px solid var(--line);padding:10px 18px env(safe-area-inset-bottom,0px);display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 18px rgba(62,53,43,.10);box-sizing:border-box}
@@ -871,8 +871,10 @@ function listData(){
  var a=places.slice(),q=S.q.trim().toLowerCase();
  if(q)a=a.filter(function(p){return (p.name+' '+(p.addr||'')+' '+(p.memo||'')).toLowerCase().indexOf(q)>=0});
  if(S.chip==='unvisited')a=a.filter(function(p){return !p.visited});
+ if(S.chip==='often')a=a.filter(function(p){return stampsOf(p).length>=2});
  a.forEach(function(p){p._d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null});
  if(S.chip==='recent')a.sort(function(x,y){return y.createdAt-x.createdAt});
+ else if(S.chip==='often')a.sort(function(x,y){return (stampsOf(y).length-stampsOf(x).length)||((x._d==null?1e12:x._d)-(y._d==null?1e12:y._d))});
  else a.sort(function(x,y){return ((x._d==null?1e12:x._d)-(y._d==null?1e12:y._d))||(y.createdAt-x.createdAt)});
  return a;
 }
@@ -883,7 +885,7 @@ function placeRowHtml(p,idAttr){
 }
 function refreshFind(fit){
  var a=listData();
- $('#chips').innerHTML=[['near','내 주변'],['recent','최근 저장'],['unvisited','안 가본 곳']].map(function(c){return '<button class="chip'+(S.chip===c[0]?' on':'')+'" data-act="chip" data-c="'+c[0]+'">'+c[1]+'</button>'}).join('');
+ $('#chips').innerHTML=[['near','내 주변'],['recent','최근 저장'],['often','자주 간 곳'],['unvisited','안 가본 곳']].map(function(c){return '<button class="chip'+(S.chip===c[0]?' on':'')+'" data-act="chip" data-c="'+c[0]+'">'+c[1]+'</button>'}).join('');
  var selP=S.hl?byId(S.hl):null;
  var st=$('#sheetTitle'),fb=$('#fullBtn'),cb=$('#clearHlBtn');
  if(selP){
@@ -1370,7 +1372,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261019w';
+var BUILD='20261019x';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
