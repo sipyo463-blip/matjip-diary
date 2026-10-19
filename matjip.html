@@ -116,7 +116,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .melab{position:absolute;left:10px;top:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
 .mapctrls{position:absolute;right:12px;bottom:calc(46% + 12px);z-index:600;display:flex;flex-direction:column;gap:10px;transition:bottom .2s}
 .fwrap[data-sheet=low] #fmap{inset:0!important}
-.fwrap[data-sheet=low] .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 44px)}
+.fwrap[data-sheet=low] .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
 .fwrap[data-sheet=high] .mapctrls,.fwrap.dragging .mapctrls{opacity:0;pointer-events:none}
 .fwrap.mapfull .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 12px);opacity:1;pointer-events:auto}
 .fwrap.mapfull.hascard .mapctrls{display:none}
@@ -144,8 +144,8 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .sheet{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:600;background:var(--paper);border-radius:14px 14px 0 0;border-top:1px solid var(--line);padding:10px 18px env(safe-area-inset-bottom,0px);display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 18px rgba(62,53,43,.10);box-sizing:border-box}
 .sheet.high{height:calc(100% - env(safe-area-inset-top,0px) - 112px)}
-.sheet.low{height:calc(env(safe-area-inset-bottom,0px) + 30px)}
-.sheet.low .sh,.sheet.low .list{display:none}
+.sheet.low{height:calc(env(safe-area-inset-bottom,0px) + 84px)}
+.sheet.low .list,.sheet.low #fullBtn{display:none}
 .sheet .sh{touch-action:none}
 .fwrap.kb .sheet{height:62%!important}
 .fwrap.kb .sheet .sh,.fwrap.kb .sheet .list{display:flex}
@@ -1372,7 +1372,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261019x';
+var BUILD='20261019y';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
