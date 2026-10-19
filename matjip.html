@@ -101,11 +101,16 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .melab{position:absolute;left:10px;top:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
 .mapctrls{position:absolute;right:12px;bottom:calc(46% + 12px);z-index:600;display:flex;flex-direction:column;gap:10px;transition:bottom .2s}
 .fwrap.mapfull .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
-.fwrap.mapfull.hascard .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 94px)}
+.fwrap.mapfull.hascard .mapctrls{display:none}
 .fwrap.mapfull #fmap{inset:0!important}
 .fwrap.mapfull .sheet,.fwrap.mapfull .fsearch{display:none}
-.mapcard{display:none;position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:600}
-.mapcard button{width:100%;text-align:left}
+.mapcard{display:none;position:absolute;left:0;right:0;bottom:0;z-index:600;background:var(--paper);border-radius:16px 16px 0 0;box-shadow:0 -6px 18px rgba(62,53,43,.18);max-height:50dvh;max-height:50vh;overflow-y:auto}
+.mapcard .mcph{width:100%;height:150px;background-size:cover;background-position:center;border-radius:16px 16px 0 0;background-color:var(--card)}
+.mapcard .mcbody{padding:14px 18px calc(env(safe-area-inset-bottom,0px) + 16px)}
+.mapcard .mcx{position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
+.mapcard .mcname{font-size:18px;font-weight:800}
+.mapcard .mcmeta{font-size:13px;color:var(--sub);margin-top:4px}
+.mapcard .mcbtn{width:100%;margin-top:12px}
 .locbtn{width:42px;height:42px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(62,53,43,.22);color:var(--ink)}
 .locbtn .ic{width:20px;height:20px}
 
@@ -825,6 +830,7 @@ function refreshFind(fit){
  S.findPts=pts.slice();
  if(S.pos)S.mk.push(mAdd(M,S.pos.lat,S.pos.lng,ME,14,null,0));
  updateMapCard();
+ if(!S.mapFull&&selP)centerSelected(selP);
  if(fit){
   if(S.focusId){var f=byId(S.focusId);if(f&&f.lat!=null)mView(M,f.lat,f.lng,17);S.focusId=null}
   else if(S.pos){
@@ -839,12 +845,29 @@ function updateMapCard(){
  if(!S.mapFull||!S.hl){mc.style.display='none';mc.innerHTML='';if(w)w.classList.remove('hascard');return}
  var p=byId(S.hl);
  if(!p){mc.style.display='none';mc.innerHTML='';if(w)w.classList.remove('hascard');return}
- var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
  var d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null;
- var rt=d!=null?'<div class="rt">'+fmt(d)+'</div>':'';
- mc.innerHTML='<button class="row" data-act="open" data-id="'+p.id+'">'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div></div><div style="text-align:right">'+rt+(p.visited?'<span class="stamp">다녀옴</span>':'')+'</div></button>';
+ var rt=d!=null?'<span>'+fmt(d)+' · </span>':'';
+ var ph=p.photo?'<div class="mcph" style="background-image:url('+p.photo+')"></div>':'<div class="mcph" style="display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:800;color:var(--sub)">'+ini(p.name)+'</div>';
+ mc.innerHTML=ph+'<button class="mcx" data-act="clearMapCard">×</button>'+
+  '<div class="mcbody"><div class="mcname">'+esc(p.name)+(p.visited?' <span class="stamp" style="font-size:11px">다녀옴</span>':'')+'</div>'+
+  '<div class="mcmeta">'+rt+esc(cat(p.name))+(p.memo?' · '+esc(p.memo):(p.addr?' · '+esc(p.addr):''))+'</div>'+
+  '<button class="btn mcbtn" data-act="open" data-id="'+p.id+'">자세히 보기</button></div>';
  mc.style.display='block';
  if(w)w.classList.add('hascard');
+ centerSelected(p);
+}
+function panelHeightNow(){
+ if(S.mapFull){var mc=$('#mapcard');return (mc&&mc.style.display!=='none')?mc.offsetHeight:0}
+ var sh=document.querySelector('.sheet');return sh?sh.offsetHeight:0
+}
+function mPanBy(M,dx,dy){try{if(M.t==='n'){if(M.m.panBy)M.m.panBy(new naver.maps.Point(dx,dy))}else M.m.panBy([dx,dy])}catch(e){}}
+function centerSelected(p){
+ if(!p||p.lat==null)return;
+ var M=S.map;if(!M)return;
+ var z;try{z=M.m.getZoom()}catch(e){z=16}
+ mView(M,p.lat,p.lng,z);
+ var panelH=panelHeightNow();
+ if(panelH>40)setTimeout(function(){mPanBy(M,0,Math.min(panelH/2,170))},30);
 }
 function toggleSheetFull(){
  S.sheetFull=!S.sheetFull;
@@ -1061,7 +1084,7 @@ document.addEventListener('click',function(e){
   case 'myLoc':myLoc();break;
   case 'toggleMapFull':toggleMapFull();break;
   case 'toggleFull':toggleSheetFull();break;
-  case 'clearHl':S.hl=null;refreshFind(false);break;
+  case 'clearHl':case 'clearMapCard':S.hl=null;refreshFind(false);break;
   case 'fill':var p=byId(S.openId);S.editMode=false;S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
   case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';S.sheetFull=false;S.mapFull=false;go('find');break;
   case 'copy':var c=byId(S.openId);copy(c.addr||c.name);break;
