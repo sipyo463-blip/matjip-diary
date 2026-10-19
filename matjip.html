@@ -615,13 +615,16 @@ function vConfirm(){
  var rows=S.cands.map(function(c,i){return '<button class="row'+(i===S.sel?' sel':'')+'" data-act="pick" data-i="'+i+'"><div class="th">'+ini(c.name)+'</div><div class="mid"><div class="nm">'+esc(c.name)+'</div><div class="meta">'+esc(cat(c.name))+' · '+esc(c.addr)+'</div></div><div class="rt'+(i?' g':'')+'">'+fmt(c.d)+'</div></button>'}).join('');
  var ref=S.photoGps||S.pos,hasMap=ref||S.cands.length;
  var none=!S.cands.length?'<div class="empty">찾지 못했어요.<br>동네를 같이 적으면 더 잘 찾아요.</div>':'';
- var alt='여기 없어요 · 이름만 저장';
+ var mainBtn=S.cands.length?
+  '<button class="btn" style="'+(S.editMode?'':'width:110px;flex:none')+'" data-act="confirmSave">'+(S.editMode?'이 위치로 바꾸기':'저장')+'</button>':
+  '<button class="btn" style="'+(S.editMode?'':'width:110px;flex:none')+'" data-act="saveHere">이름만 저장</button>';
+ var alt=S.cands.length?'<button class="link" data-act="saveHere">목록에 없어요 · 이름만 저장</button>':'';
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">CHECK / PLACE</div><div class="h1">여기 맞아요?</div></div><div class="sub">"'+esc(S.query)+'"</div></div>'+
  rows+none+
  (hasMap?'<div class="mapbox"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.gpsFrom==='device'?'찍은 위치':S.photoGps&&S.gpsFrom==='pin'?'고른 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
- '<div class="two" style="flex:none">'+(S.editMode?'':'<div class="field" style="flex:1;font-size:14px"><input id="qMemo" value="'+esc(S.memo)+'" placeholder="메모 (선택)"></div>')+(S.cands.length?'<button class="btn" style="'+(S.editMode?'':'width:110px;flex:none')+'" data-act="confirmSave">'+(S.editMode?'이 위치로 바꾸기':'저장')+'</button>':'')+'</div>'+
- '<button class="link" data-act="saveHere">'+alt+'</button></div>';
+ '<div class="two" style="flex:none">'+(S.editMode?'':'<div class="field" style="flex:1;font-size:14px"><input id="qMemo" value="'+esc(S.memo)+'" placeholder="메모 (선택)"></div>')+mainBtn+'</div>'+
+ alt+'</div>';
 }
 function vFind(){
  return '<div class="fwrap"><div id="fmap"></div>'+
