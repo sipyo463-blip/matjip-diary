@@ -270,7 +270,8 @@ function picUp_(p) {
   var pid = String(p.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
   if (!pid) return { error: 'bad id' };
   var m = String(p.data || '').match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
-  if (!m || m[2].length > 120000) return { error: 'bad image' };
+  if (!m) return { error: 'bad photo' };
+  if (m[2].length > 120000) return { error: 'too big' };
   var folder = picFolder_();
   var name = code + '_' + pid + '.jpg';
   var old = folder.getFilesByName(name);

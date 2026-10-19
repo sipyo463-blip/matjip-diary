@@ -288,7 +288,7 @@ async function uploadPhotos(code){
    try{
     var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({photoUp:{code:code,id:p.id,data:d}})});
     var j=await r.json();
-    if(j&&j.pic){p.pic=j.pic;p.picKey=picKeyOf(p.photo);n++}else if(j&&j.error==='bad image'){p.picKey=picKeyOf(p.photo)}else break;
+    if(j&&j.pic){p.pic=j.pic;p.picKey=picKeyOf(p.photo);n++}else if(j&&(j.error==='too big'||j.error==='bad photo')){p.picKey=picKeyOf(p.photo)}else break;
    }catch(e){break}
   }
   if(n)persist(true);
@@ -1446,7 +1446,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261020j';
+var BUILD='20261020k';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
