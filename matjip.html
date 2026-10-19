@@ -708,9 +708,8 @@ function vDetail(){
  '<div class="spec">'+spec('주 소',esc(p.addr||'-'))+
  '<div class="r"><div class="k">메 모</div><div class="v"></div><textarea id="memoEd" rows="2" placeholder="메모를 남겨요">'+esc(p.memo||'')+'</textarea></div>'+
  spec('저 장',dateLabel(p.createdAt)+' | '+srcL)+(d!=null?spec('거 리',fmt(d)):'')+'</div>'+
+(nvUrl(p)?'<a class="nvl" href="'+esc(nvUrl(p))+'" target="_blank" rel="noopener">N 네이버 리뷰 보기</a>':'')+
  '<div class="grow"></div>'+
- (nvUrl(p)?'<a class="nvl" href="'+esc(nvUrl(p))+'" target="_blank" rel="noopener">N 네이버 리뷰 보기</a>':'')+
- '<button class="btn" data-act="showMap">지도에서 보기</button>'+
  '<div class="two"><button class="btn line" data-act="copy">주소 복사</button><button class="btn line" data-act="visit">'+(p.visited?'다녀왔어요 ✓':'다녀왔어요')+'</button></div>'+
  '<button class="link" data-act="del">삭제</button></div>';
 }
@@ -1190,7 +1189,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019g';
+var BUILD='20261019h';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
