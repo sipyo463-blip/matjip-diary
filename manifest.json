@@ -5,6 +5,7 @@
   "start_url": "./matjip.html",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#EBE3D0",
   "theme_color": "#EBE3D0",
   "lang": "ko",
