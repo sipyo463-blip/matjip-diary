@@ -603,8 +603,7 @@ function vPick(){
    '<div class="pn sm" style="flex:none;margin-top:2px">'+(i+1)+'</div>'+th+
    '<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+(p._d!=null?' · '+fmt(p._d):'')+'</div>'+
    (r.desc?'<div class="sub" style="margin-top:4px;white-space:normal">'+esc(r.desc)+'</div>':'')+
-   (r.reason?'<div class="sub" style="margin-top:4px;white-space:normal">💬 '+esc(r.reason)+'</div>':'')+'</div></button>'+
-   ((r.naver||nvUrl(p))?'<a class="nvl" href="'+esc(r.naver||nvUrl(p))+'" target="_blank" rel="noopener" style="margin-top:6px">N 네이버에서 리뷰 보기</a>':'');
+   (r.reason?'<div class="sub" style="margin-top:4px;white-space:normal">💬 '+esc(r.reason)+'</div>':'')+'</div></button>';
  }).join('');
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">오늘은 여기 어때요?</div></div></div>'+
@@ -1191,7 +1190,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019f';
+var BUILD='20261019g';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
