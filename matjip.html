@@ -480,13 +480,6 @@ async function startShare(){
  await pushSync();
  S.shareBusy=false;toast('공유를 시작했어요! 링크를 보내 보세요');render();
 }
-async function manualSync(){
- if(S.shareBusy)return;
- S.shareBusy=true;render();
- await pullSync(false);
- await pushSync();
- S.shareBusy=false;toast('동기화했어요');render();
-}
 function stopShare(){
  try{localStorage.removeItem(ROOM_KEY)}catch(e){}
  toast('공유를 중단했어요. 이제부터는 나만 볼 수 있어요');render();
@@ -689,8 +682,7 @@ function vShare(){
  '<button class="chip" data-act="shareCopy">링크 복사</button>'+
  (navigator.share?'<button class="chip" data-act="shareSend">공유하기</button>':'')+
  '</div>'+
- '<button class="btn line" data-act="manualSync" '+(busy?'disabled':'')+' style="margin-top:16px">'+(busy?'동기화 중…':'지금 동기화 ('+places.length+'곳)')+'</button>'+
- '<button class="link" data-act="stopShare" style="margin-top:14px">공유 중단하기</button>'+
+ '<button class="link" data-act="stopShare" style="margin-top:16px">공유 중단하기</button>'+
  '<div class="grow"></div></div>';
 }
 function vPin(){
@@ -970,7 +962,6 @@ document.addEventListener('click',function(e){
   case 'shareCopy':shareCopy();break;
   case 'shareSend':shareSend();break;
   case 'startShare':startShare();break;
-  case 'manualSync':manualSync();break;
   case 'stopShare':stopShare();break;
   case 'install':if(S.installEv){S.installEv.prompt();S.installEv=null;render()}break;
   case 'find':doFind();break;
