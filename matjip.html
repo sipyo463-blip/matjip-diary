@@ -105,12 +105,11 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .fwrap.mapfull #fmap{inset:0!important}
 .fwrap.mapfull .sheet,.fwrap.mapfull .fsearch{display:none}
 .mapcard{display:none;position:absolute;left:0;right:0;bottom:0;z-index:600;background:var(--paper);border-radius:16px 16px 0 0;box-shadow:0 -6px 18px rgba(62,53,43,.18);max-height:50dvh;max-height:50vh;overflow-y:auto}
-.mapcard .mcph{width:100%;height:150px;background-size:cover;background-position:center;border-radius:16px 16px 0 0;background-color:var(--card)}
-.mapcard .mcbody{padding:14px 18px calc(env(safe-area-inset-bottom,0px) + 16px)}
-.mapcard .mcx{position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
-.mapcard .mcname{font-size:18px;font-weight:800}
-.mapcard .mcmeta{font-size:13px;color:var(--sub);margin-top:4px}
-.mapcard .mcbtn{width:100%;margin-top:12px}
+.mapcard .mcbody{padding:20px 18px calc(env(safe-area-inset-bottom,0px) + 16px);position:relative}
+.mapcard .mcx{position:absolute;right:14px;top:14px;width:28px;height:28px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1}
+.mapcard .mcname{font-size:17px;font-weight:800;padding-right:34px}
+.mapcard .mcmeta{font-size:13px;color:var(--sub);margin-top:3px}
+.mapcard .mcbtn{width:100%;margin-top:14px}
 .locbtn{width:42px;height:42px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(62,53,43,.22);color:var(--ink)}
 .locbtn .ic{width:20px;height:20px}
 
@@ -796,7 +795,7 @@ function listData(){
 function placeRowHtml(p,idAttr){
  var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
  var rt=p._d!=null?'<div class="rt">'+fmt(p._d)+'</div>':'<div class="rt g" style="font-size:12px">위치 없음</div>';
- return '<button class="row sel" data-act="open" data-id="'+p.id+'"'+(idAttr?' id="r_'+p.id+'"':'')+'>'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div></div><div style="text-align:right">'+rt+(p.visited?'<span class="stamp">다녀옴</span>':'')+'</div></button>';
+ return '<button class="row sel" data-act="open" data-id="'+p.id+'"'+(idAttr?' id="r_'+p.id+'"':'')+'>'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div><div class="meta" style="margin-top:2px">'+dateLabel(p.createdAt)+' 추가'+'</div></div><div style="text-align:right">'+rt+(p.visited?'<span class="stamp">다녀옴</span>':'')+'</div></button>';
 }
 function refreshFind(fit){
  var a=listData();
@@ -847,10 +846,12 @@ function updateMapCard(){
  if(!p){mc.style.display='none';mc.innerHTML='';if(w)w.classList.remove('hascard');return}
  var d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null;
  var rt=d!=null?'<span>'+fmt(d)+' · </span>':'';
- var ph=p.photo?'<div class="mcph" style="background-image:url('+p.photo+')"></div>':'<div class="mcph" style="display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:800;color:var(--sub)">'+ini(p.name)+'</div>';
- mc.innerHTML=ph+'<button class="mcx" data-act="clearMapCard">×</button>'+
-  '<div class="mcbody"><div class="mcname">'+esc(p.name)+(p.visited?' <span class="stamp" style="font-size:11px">다녀옴</span>':'')+'</div>'+
-  '<div class="mcmeta">'+rt+esc(cat(p.name))+(p.memo?' · '+esc(p.memo):(p.addr?' · '+esc(p.addr):''))+'</div>'+
+ var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
+ mc.innerHTML='<button class="mcx" data-act="clearMapCard">×</button>'+
+  '<div class="mcbody"><div style="display:flex;gap:12px;align-items:flex-start">'+th+
+  '<div class="mid"><div class="mcname">'+esc(p.name)+(p.visited?' <span class="stamp" style="font-size:11px">다녀옴</span>':'')+'</div>'+
+  '<div class="mcmeta">'+dateLabel(p.createdAt)+' 추가</div>'+
+  '<div class="mcmeta">'+rt+esc(cat(p.name))+(p.memo?' · '+esc(p.memo):(p.addr?' · '+esc(p.addr):''))+'</div></div></div>'+
   '<button class="btn mcbtn" data-act="open" data-id="'+p.id+'">자세히 보기</button></div>';
  mc.style.display='block';
  if(w)w.classList.add('hascard');
