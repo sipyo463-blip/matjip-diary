@@ -107,10 +107,11 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .fwrap.mapfull .sheet,.fwrap.mapfull .fsearch{display:none}
 .mapcard{display:none;position:absolute;left:0;right:0;bottom:0;top:66%;z-index:600;background:var(--paper);border-radius:16px 16px 0 0;box-shadow:0 -6px 18px rgba(62,53,43,.18);overflow-y:auto}
 .mapcard .mcbody{padding:20px 18px calc(env(safe-area-inset-bottom,0px) + 16px);position:relative}
-.mapcard .mcx{position:absolute;right:14px;top:14px;width:28px;height:28px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1}
+.mapcard .mcx{position:absolute;z-index:2;right:14px;top:14px;width:28px;height:28px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1}
 .mapcard .mcname{font-size:17px;font-weight:800;padding-right:34px}
 .mapcard .mcmeta{font-size:13px;color:var(--sub);margin-top:3px}
-.mapcard .mcbtn{width:100%;margin-top:14px}
+.mapcard .mcrow{display:flex;gap:8px;margin-top:14px}
+.mapcard .mcrow>*{flex:1;min-width:0;height:48px;margin:0}
 .locbtn{width:42px;height:42px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(62,53,43,.22);color:var(--ink)}
 .locbtn .ic{width:20px;height:20px}
 
@@ -854,7 +855,7 @@ function updateMapCard(){
   '<div class="mid"><div class="mcname">'+esc(p.name)+(p.visited?' <span class="stamp" style="font-size:11px">다녀옴</span>':'')+'</div>'+
   '<div class="mcmeta">'+dateLabel(p.createdAt)+' 추가</div>'+
   '<div class="mcmeta">'+rt+esc(cat(p.name))+(p.memo?' · '+esc(p.memo):(p.addr?' · '+esc(p.addr):''))+'</div></div></div>'+
-  '<button class="btn mcbtn" data-act="open" data-id="'+p.id+'">자세히 보기</button></div>';
+  '<div class="mcrow">'+(p.naver?'<a class="nvl" href="'+esc(p.naver)+'" target="_blank" rel="noopener">N 네이버 리뷰</a>':'')+'<button class="btn" data-act="open" data-id="'+p.id+'">자세히 보기</button></div></div>';
  mc.style.display='block';
  if(w&&!had){w.classList.add('hascard');setTimeout(function(){S.map&&mSize(S.map)},220)}
  else if(w)w.classList.add('hascard');
@@ -1152,7 +1153,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019b';
+var BUILD='20261019c';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
