@@ -100,7 +100,10 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .me{width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:0 0 0 7px rgba(62,53,43,.14)}
 .melab{position:absolute;left:10px;top:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
 .mapctrls{position:absolute;right:12px;bottom:calc(46% + 12px);z-index:600;display:flex;flex-direction:column;gap:10px;transition:bottom .2s}
-.fwrap.mapfull .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
+.fwrap[data-sheet=low] #fmap{inset:0!important}
+.fwrap[data-sheet=low] .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 104px)}
+.fwrap[data-sheet=high] .mapctrls,.fwrap.dragging .mapctrls{opacity:0;pointer-events:none}
+.fwrap.mapfull .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 12px);opacity:1;pointer-events:auto}
 .fwrap.mapfull.hascard .mapctrls{display:none}
 .fwrap.mapfull #fmap{inset:0!important}
 .fwrap.mapfull.hascard #fmap{inset:0 0 34% 0!important}
@@ -124,9 +127,13 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .chips{display:flex;gap:8px}
 .chip{height:34px;padding:0 14px;border-radius:9px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:700;display:flex;align-items:center}
 .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.sheet{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:600;background:var(--paper);border-radius:14px 14px 0 0;border-top:1px solid var(--line);padding:10px 18px 0;display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 18px rgba(62,53,43,.10);transition:height .2s,top .2s}
-.sheet.full{height:auto;top:calc(env(safe-area-inset-top,0px) + 112px)}
-.grab{align-self:center;width:36px;height:4px;border-radius:2px;background:var(--line);flex:none}
+.sheet{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:600;background:var(--paper);border-radius:14px 14px 0 0;border-top:1px solid var(--line);padding:10px 18px 0;display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 18px rgba(62,53,43,.10);}
+.sheet.high{height:calc(100% - env(safe-area-inset-top,0px) - 112px)}
+.sheet.low{height:calc(env(safe-area-inset-bottom,0px) + 92px)}
+.sheet.low .sh,.sheet.low .list{display:none}
+.sheet .sh{touch-action:none}
+.grab{align-self:stretch;height:26px;margin:-10px -18px -4px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab;flex:none}
+.grab::before{content:'';width:36px;height:4px;border-radius:2px;background:var(--line)}
 .destiny-wheel{display:flex;flex-direction:column;align-items:center;gap:16px}
 .destiny-emoji{font-size:60px;animation:destinySpin 1s linear infinite}
 .destiny-name{font-size:21px;font-weight:800;letter-spacing:-0.03em;min-height:28px;padding:12px 22px;border-radius:14px;background:var(--card);border:1px solid var(--line);animation:destinyPulse .4s ease-in-out infinite}
@@ -279,7 +286,7 @@ function ini(n){return esc((String(n).trim()[0]||'맛'))}
 function copy(t){try{navigator.clipboard.writeText(t).then(function(){toast('복사했어요')},fb)}catch(e){fb()}function fb(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('복사했어요')}catch(e){toast('복사하지 못했어요')}a.remove()}}
 
 /* ---------- location / geocoding ---------- */
-var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetFull:false,mapFull:false,destinyTok:0,waitTok:0,shareBusy:false};
+var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetMode:'mid',mapFull:false,destinyTok:0,waitTok:0,shareBusy:false};
 
 function locate(){
  return new Promise(function(res){
@@ -685,7 +692,7 @@ function vConfirm(){
  alt+'</div>';
 }
 function vFind(){
- return '<div class="fwrap'+(S.mapFull?' mapfull':'')+'"><div id="fmap"></div>'+
+ return '<div class="fwrap'+(S.mapFull?' mapfull':'')+'" data-sheet="'+S.sheetMode+'"><div id="fmap"></div>'+
  '<div class="fsearch"><div class="field" style="height:50px"><input id="qFind" value="'+esc(S.q)+'" placeholder="이름·동네·메모 검색" autocomplete="off"></div>'+
  '<div class="chips" id="chips"></div></div>'+
  '<div class="mapctrls">'+
@@ -693,7 +700,7 @@ function vFind(){
  '<button class="locbtn" data-act="myLoc" title="내 위치"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
  '</div>'+
  '<div class="mapcard" id="mapcard"></div>'+
- '<div class="sheet'+(S.sheetFull?' full':'')+'"><div class="grab" data-act="toggleFull"></div><div class="sh"><div style="display:flex;align-items:baseline;gap:6px"><b id="sheetTitle">가까운 맛집</b><span class="sub" id="cnt"></span></div><button class="link" data-act="toggleFull" id="fullBtn" style="font-size:12px">'+(S.sheetFull?'접기':'전체보기')+'</button><button class="link" data-act="clearHl" id="clearHlBtn" style="font-size:12px;display:none">목록으로</button></div><div class="list grow" id="plist"></div>'+
+ '<div class="sheet'+(S.sheetMode!=='mid'?' '+S.sheetMode:'')+'"><div class="grab"></div><div class="sh"><div style="display:flex;align-items:baseline;gap:6px"><b id="sheetTitle">가까운 맛집</b><span class="sub" id="cnt"></span></div><button class="link" data-act="toggleFull" id="fullBtn" style="font-size:12px">'+(S.sheetMode==='high'?'접기':'전체보기')+'</button><button class="link" data-act="clearHl" id="clearHlBtn" style="font-size:12px;display:none">목록으로</button></div><div class="list grow" id="plist"></div>'+
  '<div class="tabs"><button data-act="goSave">저장</button><button class="on">꺼내기</button></div></div></div>';
 }
 function vDetail(){
@@ -866,6 +873,7 @@ function refreshFind(fit){
  S.findPts=pts.slice();
  if(S.pos)S.mk.push(mAdd(M,S.pos.lat,S.pos.lng,ME,14,null,0));
  updateMapCard();
+ if(selP&&!S.mapFull&&S.sheetMode==='low')setSheetMode('mid');
  if(!S.mapFull&&selP)centerSelected(selP);
  if(fit){
   if(S.focusId){var f=byId(S.focusId);if(f&&f.lat!=null)mView(M,f.lat,f.lng,17);S.focusId=null}
@@ -909,12 +917,59 @@ function centerSelected(p){
  var panelH=panelHeightNow();
  if(panelH>40)setTimeout(function(){mPanBy(M,0,Math.min(panelH/2,170))},30);
 }
-function toggleSheetFull(){
- S.sheetFull=!S.sheetFull;
- var sh=document.querySelector('.sheet');if(sh)sh.classList.toggle('full',S.sheetFull);
- var b=$('#fullBtn');if(b)b.textContent=S.sheetFull?'접기':'전체보기';
- if(S.sheetFull){var qi=$('#qFind');if(qi)qi.focus()}
+var sheetTimer=null;
+function sheetModeH(sh,m){var cl=sh.className,tr=sh.style.transition,ih=sh.style.height;sh.style.transition='none';sh.style.height='';sh.className='sheet'+(m==='mid'?'':' '+m);var h=sh.offsetHeight;sh.className=cl;sh.style.height=ih;sh.style.transition=tr;return h}
+function setSheetMode(m){
+ var sh=document.querySelector('.sheet'),w=document.querySelector('.fwrap');if(!sh)return;
+ clearTimeout(sheetTimer);
+ var target=sheetModeH(sh,m);
+ S.sheetMode=m;
+ sh.style.transition='height .2s ease';sh.style.height=sh.offsetHeight+'px';
+ sh.className='sheet'+(m==='mid'?'':' '+m);
+ void sh.offsetHeight;
+ sh.style.height=target+'px';
+ if(w){w.setAttribute('data-sheet',m);w.classList.remove('dragging')}
+ var b=$('#fullBtn');if(b)b.textContent=m==='high'?'접기':'전체보기';
+ sheetTimer=setTimeout(function(){sh.style.height='';sh.style.transition='';S.map&&mSize(S.map)},230);
 }
+function toggleSheetFull(){
+ setSheetMode(S.sheetMode==='high'?'mid':'high');
+ if(S.sheetMode==='high'){var qi=$('#qFind');if(qi)qi.focus()}
+}
+(function(){
+ var d=null;
+ document.addEventListener('pointerdown',function(e){
+  var g=e.target.closest&&e.target.closest('.sheet .grab, .sheet .sh');
+  if(!g||e.target.closest('button'))return;
+  var sh=document.querySelector('.sheet');if(!sh||S.mapFull)return;
+  clearTimeout(sheetTimer);
+  d={id:e.pointerId,y:e.clientY,py:e.clientY,pt:Date.now(),v:0,h:sh.offsetHeight,moved:false,sh:sh,lo:sheetModeH(sh,'low'),mid:sheetModeH(sh,'mid'),hi:sheetModeH(sh,'high'),cur:sh.offsetHeight};
+  sh.style.transition='none';sh.style.height=d.h+'px';
+  try{g.setPointerCapture(e.pointerId)}catch(_){}
+ });
+ document.addEventListener('pointermove',function(e){
+  if(!d||e.pointerId!==d.id)return;
+  var dy=d.y-e.clientY;
+  if(!d.moved&&Math.abs(dy)<6)return;
+  if(!d.moved){d.moved=true;var w=document.querySelector('.fwrap');if(w)w.classList.add('dragging')}
+  var now=Date.now(),dt=Math.max(1,now-d.pt);d.v=(d.py-e.clientY)/dt;d.py=e.clientY;d.pt=now;
+  var h=Math.max(d.lo,Math.min(d.hi,d.h+dy));d.cur=h;
+  d.sh.style.height=h+'px';
+  d.sh.className='sheet'+(h<=d.lo+30?' low':'');
+  e.preventDefault();
+ },{passive:false});
+ function end(e){
+  if(!d||e.pointerId!==d.id)return;
+  var x=d;d=null;
+  var w=document.querySelector('.fwrap');if(w)w.classList.remove('dragging');
+  if(!x.moved){x.sh.style.height='';x.sh.style.transition='';setSheetMode(S.sheetMode==='mid'?'high':'mid');return}
+  var proj=x.cur+x.v*180,best='mid',bd=1e9;
+  [['low',x.lo],['mid',x.mid],['high',x.hi]].forEach(function(c){var dd=Math.abs(proj-c[1]);if(dd<bd){bd=dd;best=c[0]}});
+  setSheetMode(best);
+ }
+ document.addEventListener('pointerup',end);
+ document.addEventListener('pointercancel',end);
+})();
 function toggleMapFull(){
  S.mapFull=!S.mapFull;
  var w=document.querySelector('.fwrap');if(w)w.classList.toggle('mapfull',S.mapFull);
@@ -1087,7 +1142,7 @@ document.addEventListener('click',function(e){
  switch(a){
   case 'back':history.back();break;
   case 'goSave':S.editMode=false;if(S.screen==='find'){killMap();S.screen='save';S.stack=['home'];render()}else{S.query='';S.fillId=null;go('save')}break;
-  case 'goFind':S.q='';S.chip='near';S.hl=null;S.sheetFull=false;S.mapFull=false;go('find');break;
+  case 'goFind':S.q='';S.chip='near';S.hl=null;S.sheetMode='mid';S.mapFull=false;go('find');break;
   case 'goShare':go('share');break;
   case 'shareCopy':shareCopy();break;
   case 'shareSend':shareSend();break;
@@ -1127,7 +1182,7 @@ document.addEventListener('click',function(e){
   case 'toggleFull':toggleSheetFull();break;
   case 'clearHl':case 'clearMapCard':S.hl=null;refreshFind(false);break;
   case 'fill':var p=byId(S.openId);S.editMode=false;S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
-  case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';S.sheetFull=false;S.mapFull=false;go('find');break;
+  case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';S.sheetMode='mid';S.mapFull=false;go('find');break;
   case 'copy':var c=byId(S.openId);copy(c.addr||c.name);break;
   case 'visit':var v=byId(S.openId);v.visited=!v.visited;persist();render();break;
   case 'del':if(confirm('이 맛집을 삭제할까요?')){places=places.filter(function(x){return x.id!==S.openId});persist();history.back()}break;
@@ -1189,7 +1244,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019h';
+var BUILD='20261019i';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
