@@ -100,9 +100,10 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .me{width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:0 0 0 7px rgba(62,53,43,.14)}
 .melab{position:absolute;left:10px;top:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
 .mapctrls{position:absolute;right:12px;bottom:calc(46% + 12px);z-index:600;display:flex;flex-direction:column;gap:10px;transition:bottom .2s}
-.fwrap.mapfull .mapctrls{bottom:calc(34% + env(safe-area-inset-bottom,0px) + 12px)}
+.fwrap.mapfull .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
 .fwrap.mapfull.hascard .mapctrls{display:none}
-.fwrap.mapfull #fmap{inset:0 0 34% 0!important}
+.fwrap.mapfull #fmap{inset:0!important}
+.fwrap.mapfull.hascard #fmap{inset:0 0 34% 0!important}
 .fwrap.mapfull .sheet,.fwrap.mapfull .fsearch{display:none}
 .mapcard{display:none;position:absolute;left:0;right:0;bottom:0;top:66%;z-index:600;background:var(--paper);border-radius:16px 16px 0 0;box-shadow:0 -6px 18px rgba(62,53,43,.18);overflow-y:auto}
 .mapcard .mcbody{padding:20px 18px calc(env(safe-area-inset-bottom,0px) + 16px);position:relative}
@@ -841,9 +842,10 @@ function refreshFind(fit){
 function updateMapCard(){
  var mc=$('#mapcard');if(!mc)return;
  var w=document.querySelector('.fwrap');
- if(!S.mapFull||!S.hl){mc.style.display='none';mc.innerHTML='';if(w)w.classList.remove('hascard');return}
+ var had=w&&w.classList.contains('hascard');
+ if(!S.mapFull||!S.hl){mc.style.display='none';mc.innerHTML='';if(w)w.classList.remove('hascard');if(had)setTimeout(function(){S.map&&mSize(S.map)},220);return}
  var p=byId(S.hl);
- if(!p){mc.style.display='none';mc.innerHTML='';if(w)w.classList.remove('hascard');return}
+ if(!p){mc.style.display='none';mc.innerHTML='';if(w)w.classList.remove('hascard');if(had)setTimeout(function(){S.map&&mSize(S.map)},220);return}
  var d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null;
  var rt=d!=null?'<span>'+fmt(d)+' · </span>':'';
  var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
@@ -854,7 +856,8 @@ function updateMapCard(){
   '<div class="mcmeta">'+rt+esc(cat(p.name))+(p.memo?' · '+esc(p.memo):(p.addr?' · '+esc(p.addr):''))+'</div></div></div>'+
   '<button class="btn mcbtn" data-act="open" data-id="'+p.id+'">자세히 보기</button></div>';
  mc.style.display='block';
- if(w)w.classList.add('hascard');
+ if(w&&!had){w.classList.add('hascard');setTimeout(function(){S.map&&mSize(S.map)},220)}
+ else if(w)w.classList.add('hascard');
  centerSelected(p);
 }
 function panelHeightNow(){
