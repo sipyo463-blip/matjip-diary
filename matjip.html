@@ -592,7 +592,7 @@ function vHome(){
  installBanner()+
  '<button class="memo dark" data-act="goSave"><div class="mt"><span class="eyebrow">SAVE</span><b>저장하기</b><span class="d">찍거나, 쓰거나, 사진을 올려요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>'+
  '<button class="memo card" data-act="goFind"><div class="mt"><span class="eyebrow">PULL OUT</span><b>꺼내기</b><span class="d">저장한 '+n+'곳 | 내 주변부터</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg></button>'+
- '<button class="memo card" data-act="goPick"><div class="mt"><span class="eyebrow">PICK FOR ME</span><b>추천하기</b><span class="d">오늘 날씨·기분에 맞춰 근처 맛집을 골라줘요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg></button>'+
+ '<button class="memo card" data-act="goPick"><div class="mt"><span class="eyebrow">PICK FOR ME</span><b>추천받기</b><span class="d">오늘 날씨·기분에 맞춰 근처 맛집을 골라줘요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg></button>'+
  '<button class="link" data-act="goShare" style="font-size:12px;margin-top:2px">친구와 공유하기</button>'+
  '<div class="grow"></div></div>';
 }
@@ -651,7 +651,7 @@ function vFind(){
  '<button class="locbtn" data-act="myLoc" title="내 위치"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
  '</div>'+
  '<div class="mapcard" id="mapcard"></div>'+
- '<div class="sheet'+(S.sheetFull?' full':'')+'"><div class="grab" data-act="toggleFull"></div><div class="sh"><div style="display:flex;align-items:baseline;gap:6px"><b>가까운 맛집</b><span class="sub" id="cnt"></span></div><button class="link" data-act="toggleFull" id="fullBtn" style="font-size:12px">'+(S.sheetFull?'접기':'전체보기')+'</button></div><div class="list grow" id="plist"></div>'+
+ '<div class="sheet'+(S.sheetFull?' full':'')+'"><div class="grab" data-act="toggleFull"></div><div class="sh"><div style="display:flex;align-items:baseline;gap:6px"><b id="sheetTitle">가까운 맛집</b><span class="sub" id="cnt"></span></div><button class="link" data-act="toggleFull" id="fullBtn" style="font-size:12px">'+(S.sheetFull?'접기':'전체보기')+'</button><button class="link" data-act="clearHl" id="clearHlBtn" style="font-size:12px;display:none">목록으로</button></div><div class="list grow" id="plist"></div>'+
  '<div class="tabs"><button data-act="goSave">저장</button><button class="on">꺼내기</button></div></div></div>';
 }
 function vDetail(){
@@ -788,15 +788,33 @@ function listData(){
  else a.sort(function(x,y){return ((x._d==null?1e12:x._d)-(y._d==null?1e12:y._d))||(y.createdAt-x.createdAt)});
  return a;
 }
+function placeRowHtml(p,idAttr){
+ var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
+ var rt=p._d!=null?'<div class="rt">'+fmt(p._d)+'</div>':'<div class="rt g" style="font-size:12px">위치 없음</div>';
+ return '<button class="row sel" data-act="open" data-id="'+p.id+'"'+(idAttr?' id="r_'+p.id+'"':'')+'>'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div></div><div style="text-align:right">'+rt+(p.visited?'<span class="stamp">다녀옴</span>':'')+'</div></button>';
+}
 function refreshFind(fit){
  var a=listData();
  $('#chips').innerHTML=[['near','내 주변'],['recent','최근 저장'],['unvisited','안 가본 곳']].map(function(c){return '<button class="chip'+(S.chip===c[0]?' on':'')+'" data-act="chip" data-c="'+c[0]+'">'+c[1]+'</button>'}).join('');
- $('#cnt').textContent=a.length+'곳';
- $('#plist').innerHTML=a.length?a.map(function(p){
-  var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
-  var rt=p._d!=null?'<div class="rt">'+fmt(p._d)+'</div>':'<div class="rt g" style="font-size:12px">위치 없음</div>';
-  return '<button class="row'+(S.hl===p.id?' sel':'')+'" data-act="open" data-id="'+p.id+'" id="r_'+p.id+'">'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div></div><div style="text-align:right">'+rt+(p.visited?'<span class="stamp">다녀옴</span>':'')+'</div></button>';
- }).join(''):'<div class="empty">'+(places.length?'찾는 곳이 없어요.':'아직 저장한 곳이 없어요.<br>길에서 발견하면 저장하기를 눌러요.')+'</div>';
+ var selP=S.hl?byId(S.hl):null;
+ var st=$('#sheetTitle'),fb=$('#fullBtn'),cb=$('#clearHlBtn');
+ if(selP){
+  if(st)st.textContent=selP.name;
+  if(fb)fb.style.display='none';
+  if(cb)cb.style.display='';
+  $('#cnt').textContent='';
+  $('#plist').innerHTML=placeRowHtml(selP,false);
+ }else{
+  if(st)st.textContent='가까운 맛집';
+  if(fb)fb.style.display='';
+  if(cb)cb.style.display='none';
+  $('#cnt').textContent=a.length+'곳';
+  $('#plist').innerHTML=a.length?a.map(function(p){
+   var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
+   var rt=p._d!=null?'<div class="rt">'+fmt(p._d)+'</div>':'<div class="rt g" style="font-size:12px">위치 없음</div>';
+   return '<button class="row" data-act="open" data-id="'+p.id+'" id="r_'+p.id+'">'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div></div><div style="text-align:right">'+rt+(p.visited?'<span class="stamp">다녀옴</span>':'')+'</div></button>';
+  }).join(''):'<div class="empty">'+(places.length?'찾는 곳이 없어요.':'아직 저장한 곳이 없어요.<br>길에서 발견하면 저장하기를 눌러요.')+'</div>';
+ }
  var M=S.map;if(!M)return;
  mDel(M,S.mk);S.mk=[];
  var pts=[];
@@ -1043,6 +1061,7 @@ document.addEventListener('click',function(e){
   case 'myLoc':myLoc();break;
   case 'toggleMapFull':toggleMapFull();break;
   case 'toggleFull':toggleSheetFull();break;
+  case 'clearHl':S.hl=null;refreshFind(false);break;
   case 'fill':var p=byId(S.openId);S.editMode=false;S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
   case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';S.sheetFull=false;S.mapFull=false;go('find');break;
   case 'copy':var c=byId(S.openId);copy(c.addr||c.name);break;
