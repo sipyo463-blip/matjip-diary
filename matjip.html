@@ -689,9 +689,8 @@ function vPhoto(){
  (S.reading?'<div class="card" style="padding:14px 16px;display:flex;gap:10px;align-items:center"><span class="spin" style="border-color:rgba(60,50,40,.25);border-top-color:#3c3228"></span><div class="sub">사진에서 가게 이름을 찾는 중이에요</div></div>':
   '<div class="card" style="padding:14px 16px"><div style="font-size:14px;font-weight:700">'+esc(S.signMsg||'이름을 확인해 주세요')+'</div>'+(S.signErr?'<div class="sub">('+esc(S.signErr)+')</div>':'')+'</div>')+
  '<div class="field"><input id="qName" value="'+esc(S.query)+'" placeholder="가게 이름 (동네와 같이)" autocomplete="off" enterkeyhint="search"></div>'+
- '<div class="grow"></div>'+
  (S.reading?'':'<button class="btn line" data-act="reread">간판 다시 읽기</button>')+
- '<button class="btn" data-act="find" id="goBtn">찾기</button></div>';
+ '<button class="btn" data-act="find" id="goBtn">찾기</button><div class="grow"></div></div>';
 }
 function vFill(){
  var p=byId(S.fillId)||{};
@@ -699,7 +698,7 @@ function vFill(){
  '<div><div class="eyebrow">FILL / ADDRESS</div><div class="h1">위치를 찾아요</div></div>'+
  '<div class="card" style="padding:14px 16px"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(p.addr||'위치 정보 없음')+'</div></div>'+
  '<div class="field"><input id="qName" value="'+esc(S.query)+'" placeholder="동네와 이름 (예: 가정동 접시고기)" autocomplete="off" enterkeyhint="search"></div>'+
- '<div class="grow"></div><button class="btn" data-act="find" id="goBtn">찾기</button></div>';
+ '<button class="btn" data-act="find" id="goBtn">찾기</button><div class="grow"></div></div>';
 }
 function vConfirm(){
  var rows=S.cands.map(function(c,i){return '<button class="row'+(i===S.sel?' sel':'')+'" data-act="pick" data-i="'+i+'"><div class="th">'+ini(c.name)+'</div><div class="mid"><div class="nm">'+esc(c.name)+'</div><div class="meta">'+esc(cat(c.name))+' · '+esc(c.addr)+'</div></div><div class="rt'+(i?' g':'')+'">'+fmt(c.d)+'</div></button>'}).join('');
@@ -1340,7 +1339,7 @@ render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
 try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portrait').catch(function(){})}catch(e){}
-var BUILD='20261019r';
+var BUILD='20261019s';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
