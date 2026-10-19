@@ -38,7 +38,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .btn{height:54px;border-radius:14px;background:var(--ink);color:var(--paper);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
 .btn.line{background:none;color:var(--ink);border:1px solid var(--ink);height:48px;font-size:14px}
 .btn[disabled]{opacity:.55}
-.shbtn{margin-top:6px;font-size:17px;font-weight:800;height:56px;transition:transform .08s}
+.shbtn{border:none;margin-top:6px;font-size:17px;font-weight:800;height:56px;transition:transform .08s}
 .shbtn:active{transform:scale(.96);background:var(--chip)}
 .link{text-align:center;font-size:13px;color:var(--sub);padding:4px;text-decoration:underline;text-underline-offset:3px}
 .ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
@@ -1339,7 +1339,7 @@ render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
 try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portrait').catch(function(){})}catch(e){}
-var BUILD='20261019t';
+var BUILD='20261019u';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
