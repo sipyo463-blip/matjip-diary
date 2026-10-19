@@ -152,8 +152,8 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .wait-orb b{position:relative;width:92px;height:92px;border-radius:50%;background:var(--card);border:1px solid var(--line);box-shadow:0 6px 18px rgba(62,53,43,.16);display:flex;align-items:center;justify-content:center;font-size:44px;animation:waitBeat 1.2s ease-in-out infinite}
 .wait-orb em{position:absolute;font-style:normal;font-size:18px;animation:waitTwinkle 1.6s ease-in-out infinite}
 .wait-orb em:nth-of-type(1){left:-6px;top:6px}.wait-orb em:nth-of-type(2){right:-4px;top:-2px;animation-delay:.5s}.wait-orb em:nth-of-type(3){right:6px;bottom:-4px;animation-delay:1s}
-.wait-name{min-width:180px;text-align:center;font-size:20px;font-weight:800;letter-spacing:-0.03em;padding:12px 22px;border-radius:14px;background:var(--card);border:1px solid var(--line);filter:blur(2.2px);opacity:.75}
-.wait-msg{font-size:14px;color:var(--sub);text-align:center;min-height:20px;animation:waitFade .5s ease}
+.wait-name{min-width:180px;text-align:center;font-size:20px;font-weight:800;letter-spacing:-0.03em;padding:12px 22px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.wait-msg{font-size:14px;color:var(--ink);text-align:center;min-height:20px;animation:waitFade .5s ease}
 .wait-dots span{display:inline-block;animation:waitDot 1.2s infinite}.wait-dots span:nth-child(2){animation-delay:.2s}.wait-dots span:nth-child(3){animation-delay:.4s}
 @keyframes waitRing{0%{transform:scale(.6);opacity:.35}100%{transform:scale(1.35);opacity:0}}
 @keyframes waitBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.09) rotate(-4deg)}}
@@ -504,7 +504,6 @@ function startWaitFx(cands,tok){
   if(names.length){ni=(ni+1+Math.floor(Math.random()*Math.max(1,names.length-1)))%names.length;n.textContent=names[ni]}
   if(tick%5===0&&mi<msgs.length-1){mi++;m.style.animation='none';void m.offsetWidth;m.style.animation='';m.innerHTML=msgs[mi]+'<span class="wait-dots"><span>.</span><span>.</span><span>.</span></span>'}
   tick++;
-  var blur=Math.max(0,2.2-tick*0.05);n.style.filter='blur('+blur+'px)';n.style.opacity=String(Math.min(1,.75+tick*0.01));
  }
  var iv=setInterval(step,260);step();
 }
@@ -1303,7 +1302,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019l';
+var BUILD='20261019m';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
