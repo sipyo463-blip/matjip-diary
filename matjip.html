@@ -755,7 +755,7 @@ function vDetail(){
  '<div class="spec">'+spec('주 소',esc(p.addr||'-'))+
  '<div class="r"><div class="k">메 모</div><div class="v"></div><textarea id="memoEd" rows="2" placeholder="메모를 남겨요">'+esc(p.memo||'')+'</textarea></div>'+
  spec('저 장',dateLabel(p.createdAt)+' | '+srcL)+(d!=null?spec('거 리',fmt(d)):'')+'</div>'+
-(nvUrl(p)?'<a class="nvl" href="'+esc(nvUrl(p))+'" target="_blank" rel="noopener">N 네이버 리뷰 보기</a>':'')+
+(nvUrl(p)?'<a class="nvl" href="'+esc(nvUrl(p))+'">N 네이버 리뷰 보기</a>':'')+
  stampCardHtml(p)+
  '<div class="grow"></div>'+
  '<button class="link" data-act="del">삭제</button></div>';
@@ -871,10 +871,10 @@ function listData(){
  var a=places.slice(),q=S.q.trim().toLowerCase();
  if(q)a=a.filter(function(p){return (p.name+' '+(p.addr||'')+' '+(p.memo||'')).toLowerCase().indexOf(q)>=0});
  if(S.chip==='unvisited')a=a.filter(function(p){return !p.visited});
- if(S.chip==='often')a=a.filter(function(p){return stampsOf(p).length>=2});
+ if(S.chip==='often')a=a.filter(function(p){return stampsOf(p).length>=1});
  a.forEach(function(p){p._d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null});
  if(S.chip==='recent')a.sort(function(x,y){return y.createdAt-x.createdAt});
- else if(S.chip==='often')a.sort(function(x,y){return (stampsOf(y).length-stampsOf(x).length)||((x._d==null?1e12:x._d)-(y._d==null?1e12:y._d))});
+ else if(S.chip==='often')a.sort(function(x,y){return (stampsOf(y).length-stampsOf(x).length)||(Math.max.apply(null,stampsOf(y))-Math.max.apply(null,stampsOf(x)))});
  else a.sort(function(x,y){return ((x._d==null?1e12:x._d)-(y._d==null?1e12:y._d))||(y.createdAt-x.createdAt)});
  return a;
 }
@@ -940,7 +940,7 @@ function updateMapCard(){
   '<div class="mid"><div class="mcname">'+esc(p.name)+(stampsOf(p).length?' <span class="stamp" style="font-size:11px">'+stampsOf(p).length+'회 방문</span>':'')+'</div>'+
   '<div class="mcmeta">'+dateLabel(p.createdAt)+' 추가</div>'+
   '<div class="mcmeta">'+rt+esc(cat(p.name))+(p.memo?' · '+esc(p.memo):(p.addr?' · '+esc(p.addr):''))+'</div></div></div>'+
-  '<div class="mcrow">'+(nvUrl(p)?'<a class="nvl" href="'+esc(nvUrl(p))+'" target="_blank" rel="noopener">N 네이버 리뷰</a>':'')+'<button class="btn" data-act="open" data-id="'+p.id+'">자세히 보기</button></div></div>';
+  '<div class="mcrow">'+(nvUrl(p)?'<a class="nvl" href="'+esc(nvUrl(p))+'">N 네이버 리뷰</a>':'')+'<button class="btn" data-act="open" data-id="'+p.id+'">자세히 보기</button></div></div>';
  mc.style.display='block';
  if(w&&!had){w.classList.add('hascard');setTimeout(function(){S.map&&mSize(S.map)},220)}
  else if(w)w.classList.add('hascard');
@@ -1372,7 +1372,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261019y';
+var BUILD='20261019z';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
