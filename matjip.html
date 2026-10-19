@@ -915,7 +915,7 @@ function refreshFind(fit){
  var pts=[];
  a.forEach(function(p){if(p.lat==null)return;pts.push([p.lat,p.lng]);
   var on=S.hl===p.id;
-  S.mk.push(mAdd(M,p.lat,p.lng,pinHtml('',on?'on':'sm'),on?28:22,function(){blurFind();S.hl=p.id;refreshFind(false);var r=$('#r_'+p.id);if(r)r.scrollIntoView({block:'nearest'});setTimeout(function(){var q=byId(S.hl);if(q&&!S.mapFull)centerSelected(q)},380)},on?500:0));
+  S.mk.push(mAdd(M,p.lat,p.lng,pinHtml('',on?'on':'sm'),on?28:22,function(){blurFind();S.noCenter=true;S.hl=p.id;refreshFind(false);var r=$('#r_'+p.id);if(r)r.scrollIntoView({block:'nearest'});setTimeout(function(){S.noCenter=false},800)},on?500:0));
  });
  S.findPts=pts.slice();
  if(S.pos)S.mk.push(mAdd(M,S.pos.lat,S.pos.lng,ME,14,null,0));
@@ -957,7 +957,7 @@ function panelHeightNow(){
 }
 function mPanBy(M,dx,dy){try{if(M.t==='n'){if(M.m.panBy)M.m.panBy(new naver.maps.Point(dx,dy))}else M.m.panBy([dx,dy])}catch(e){}}
 function centerSelected(p){
- if(!p||p.lat==null)return;
+ if(!p||p.lat==null||S.noCenter)return;
  var M=S.map;if(!M)return;
  var z;try{z=M.m.getZoom()}catch(e){z=16}
  mView(M,p.lat,p.lng,z);
@@ -1377,7 +1377,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261020d';
+var BUILD='20261020e';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
