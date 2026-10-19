@@ -96,6 +96,10 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .mark b{font-size:12px;font-weight:900;letter-spacing:-.04em}.mark i{font-style:normal;font-size:10px;font-weight:700}
 .mark.new{animation:stampIn .45s cubic-bezier(.2,.9,.3,1.15)}
 @keyframes stampIn{0%{transform:scale(2.6) rotate(calc(var(--r) + 20deg));opacity:0}55%{transform:scale(.88) rotate(var(--r));opacity:1}100%{transform:scale(1) rotate(var(--r));opacity:.9}}
+.fscroll{position:fixed;right:4px;width:44px;height:84px;z-index:900;display:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+.fscroll i{position:absolute;right:0;top:0;bottom:0;width:30px;border-radius:15px;background:var(--ink);opacity:.55;box-shadow:0 2px 8px rgba(62,53,43,.3);display:flex;align-items:center;justify-content:center;transition:opacity .15s,transform .15s}
+.fscroll i:before{content:"";width:14px;height:22px;background:linear-gradient(var(--paper) 0 2px,transparent 2px 7px,var(--paper) 7px 9px,transparent 9px 14px,var(--paper) 14px 16px,transparent 16px);opacity:.9}
+.fscroll.on i{opacity:.95;transform:scale(1.1)}
 .stamp{display:inline-flex;border:1.5px solid var(--stamp);color:var(--stamp);border-radius:9px;padding:0 5px;font-size:10px;font-weight:700;transform:rotate(-6deg);margin-top:2px}
 .list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
 .empty{text-align:center;color:var(--sub);font-size:14px;line-height:1.7;padding:30px 10px}
@@ -1339,7 +1343,34 @@ render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
 try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portrait').catch(function(){})}catch(e){}
-var BUILD='20261019u';
+
+(function(){
+ var el=document.createElement('div');el.className='fscroll';el.innerHTML='<i></i>';document.body.appendChild(el);
+ var drag=false,H=84;
+ function list(){return S.screen==='find'&&!S.mapFull&&S.sheetMode!=='low'?document.getElementById('plist'):null}
+ function track(l){var r=l.getBoundingClientRect();return {top:r.top,h:r.height}}
+ function sync(){
+  var l=list();
+  if(!l||l.scrollHeight<l.clientHeight*1.6){el.style.display='none';return}
+  var t=track(l);el.style.display='block';
+  if(drag)return;
+  var max=l.scrollHeight-l.clientHeight,r=max>0?l.scrollTop/max:0;
+  el.style.top=(t.top+r*(t.h-H))+'px';
+ }
+ function move(y){
+  var l=list();if(!l)return;var t=track(l);
+  var r=Math.min(1,Math.max(0,(y-H/2-t.top)/(t.h-H)));
+  el.style.top=(t.top+r*(t.h-H))+'px';
+  l.scrollTop=r*(l.scrollHeight-l.clientHeight);
+ }
+ el.addEventListener('pointerdown',function(e){drag=true;el.classList.add('on');try{el.setPointerCapture(e.pointerId)}catch(x){}move(e.clientY);e.preventDefault();e.stopPropagation()});
+ el.addEventListener('pointermove',function(e){if(drag){move(e.clientY);e.preventDefault()}});
+ function end(){drag=false;el.classList.remove('on')}
+ el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+ document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
+ setInterval(sync,300);
+})();
+var BUILD='20261019v';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
