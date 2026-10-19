@@ -166,7 +166,23 @@ var APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbwUOS0rfTpwD_8Qx-5l
 var NAVER_KEY='boh1f3rrvv';        // 네이버 클라우드 Maps 클라이언트 ID (비우면 OpenStreetMap으로 대신 표시)
 var PLACE_PROXY='https://script.google.com/macros/s/AKfycbwtN-5l9IHj-IH7f_9mNULCCbE5Rpu09V6PyB9hBo-cu7SZah7As907FpwqwrIC-jst/exec';      // (선택) 네이버 지역검색 프록시 주소
 var NV=false;
-var KEY='matjip_places_v2',IMPORT_KEY='matjip_sheet_imported_v2',ROOM_KEY='matjip_room_code';
+var KEY='matjip_places_v2',IMPORT_KEY='matjip_sheet_imported_v2',ROOM_KEY='matjip_room_code',INSTALL_HIDE_KEY='matjip_install_hide';
+function isStandalone(){try{return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(e){return false}}
+function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream}
+function installHidden(){try{return localStorage.getItem(INSTALL_HIDE_KEY)==='1'}catch(e){return false}}
+function hideInstall(){try{localStorage.setItem(INSTALL_HIDE_KEY,'1')}catch(e){}render()}
+function installBanner(){
+ if(!isShared()||isStandalone()||installHidden())return'';
+ var body=S.installEv?
+  '<div class="d">앱처럼 설치하면 더 편하게 쓸 수 있어요</div>':
+  isIOS()?'<div class="d">Safari 하단 공유 버튼 → \'홈 화면에 추가\'를 누르면 앱처럼 쓸 수 있어요</div>':
+  '<div class="d">브라우저 메뉴에서 \'홈 화면에 추가\'를 누르면 앱처럼 쓸 수 있어요</div>';
+ return '<div class="card" style="padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:2px">'+
+  '<div style="flex:1"><b style="font-size:13px">앱으로 설치하기</b>'+body+'</div>'+
+  (S.installEv?'<button class="chip" data-act="install">설치</button>':'')+
+  '<button class="link" data-act="hideInstall" style="padding:4px;font-size:18px;line-height:1">×</button>'+
+  '</div>';
+}
 var $=function(s){return document.querySelector(s)};
 var app=$('#app');
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
@@ -567,6 +583,7 @@ function vHome(){
  '<div class="top"><div><div class="h1" style="font-size:32px;letter-spacing:-0.05em">나의 맛집 다이어리</div>'+
  '<div class="sub" style="font-size:12px">'+today()+'</div></div>'+
  '</div><div class="rule"></div>'+
+ installBanner()+
  '<button class="memo dark" data-act="goSave"><div class="mt"><span class="eyebrow">SAVE</span><b>저장하기</b><span class="d">찍거나, 쓰거나, 사진을 올려요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>'+
  '<button class="memo card" data-act="goFind"><div class="mt"><span class="eyebrow">PULL OUT</span><b>꺼내기</b><span class="d">저장한 '+n+'곳 | 내 주변부터</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg></button>'+
  '<button class="memo card" data-act="goPick"><div class="mt"><span class="eyebrow">PICK FOR ME</span><b>추천하기</b><span class="d">오늘 날씨·기분에 맞춰 근처 맛집을 골라줘요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg></button>'+
@@ -963,6 +980,7 @@ document.addEventListener('click',function(e){
   case 'startShare':startShare();break;
   case 'stopShare':stopShare();break;
   case 'install':if(S.installEv){S.installEv.prompt();S.installEv=null;render()}break;
+  case 'hideInstall':hideInstall();break;
   case 'find':doFind();break;
   case 'camShot':$('#fCam').click();break;
   case 'goPick':goPick();break;
@@ -1055,7 +1073,7 @@ function loadNaver(){
 }
 render();
 if(isShared())pullSync(true);else maybeImport();
-window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save')render()});
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
  try{
