@@ -567,13 +567,13 @@ function pickRetry(){S.pickStep=0;S.pickRanked=[];S.pickDestiny=false;S.destinyS
 function shareLink(){return location.origin+location.pathname+'?r='+getRoomCode()}
 function shareCopy(){copy(shareLink())}
 function shareSend(){
- if(navigator.share){navigator.share({title:'나의 맛집 다이어리',text:'내 맛집 리스트를 같이 써요!',url:shareLink()}).catch(function(){})}
+ if(navigator.share){navigator.share({title:'나의 맛집 다이어리',text:'맛집을 같이 기록해요!',url:shareLink()}).catch(function(){})}
 }
 function quickShare(){
  if(!navigator.share){go('share');return}
  var link;
  try{ensureRoomCode();link=shareLink()}catch(e){go('share');return}
- try{navigator.share({title:'나의 맛집 다이어리',text:'내 맛집 리스트를 같이 써요!',url:link}).catch(function(){})}catch(e){go('share');return}
+ try{navigator.share({title:'나의 맛집 다이어리',text:'맛집을 같이 기록해요!',url:link}).catch(function(){})}catch(e){go('share');return}
  try{pushSync()}catch(e){}
 }
 async function startShare(){
@@ -1377,7 +1377,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261020c';
+var BUILD='20261020d';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
