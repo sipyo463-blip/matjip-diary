@@ -138,7 +138,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .fwrap.kb .chips,.fwrap.kb .mapctrls{display:none}
 .row{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 #lpMenu{position:fixed;inset:0;z-index:2000;background:rgba(40,32,24,.42);display:flex;align-items:flex-end}
-#lpMenu .box{width:100%;background:var(--paper);border-radius:18px 18px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:10px}
+#lpMenu .box{width:100%;max-width:430px;margin:0 auto;box-sizing:border-box;background:var(--paper);border-radius:18px 18px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:10px}
 #lpMenu .tt{font-size:16px;font-weight:800;text-align:center;padding:2px 0 6px}
 .grab{align-self:stretch;height:26px;margin:-10px -18px -4px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab;flex:none}
 .grab::before{content:'';width:36px;height:4px;border-radius:2px;background:var(--line)}
@@ -1303,7 +1303,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019k';
+var BUILD='20261019l';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
