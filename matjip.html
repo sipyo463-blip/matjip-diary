@@ -666,8 +666,8 @@ function vDetail(){
  var spec=function(k,v){return '<div class="r"><div class="k">'+k+'</div><div class="v"></div><div>'+v+'</div></div>'};
  var srcL={camera:'촬영',album:'앨범 사진',name:'이름 입력',remote:'이름 입력',sheet:'시트에서 가져옴'}[p.src]||'';
  return '<div class="scr"><div class="edge"></div><div class="top" style="align-items:center">'+back()+'<button class="chip" data-act="edit">정보 수정</button></div>'+
- (p.photo?'<div class="ph" style="background-image:url('+p.photo+')"><em>'+(p.thumb?'네이버 검색 사진 · 실제 매장과 다를 수 있어요':'저장할 때 찍은 사진')+'</em></div>':'')+
- '<div><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><div class="h1" style="font-size:32px">'+esc(p.name)+'</div></div>'+
+ '<div style="display:flex;gap:14px;align-items:center">'+(p.photo?'<div class="th" style="width:64px;height:64px;flex:none;background-image:url('+p.photo+')"></div>':'<div class="th" style="width:64px;height:64px;flex:none">'+ini(p.name)+'</div>')+
+ '<div style="flex:1;min-width:0"><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><div class="h1" style="font-size:28px">'+esc(p.name)+'</div>'+(p.photo&&p.thumb?'<div class="sub" style="font-size:11px;margin-top:2px">네이버 검색 사진 · 실제 매장과 다를 수 있어요</div>':'')+'</div></div>'+
  (p.needsAddr?'<div class="warn"><span>위치가 아직 없어요</span><button data-act="fill">주소 채우기</button></div>':'')+
  '<div class="spec">'+spec('주 소',esc(p.addr||'-'))+
  '<div class="r"><div class="k">메 모</div><div class="v"></div><textarea id="memoEd" rows="2" placeholder="메모를 남겨요">'+esc(p.memo||'')+'</textarea></div>'+
@@ -947,7 +947,7 @@ async function saveHere(){
 function vReview(){
  var r=S.rv;if(!r)return vHome();
  var cap=r.mine?'내가 고른 사진':r.thumb?'네이버 검색 사진 · 실제 매장과 다를 수 있어요':'';
- var ph=r.photo?'<div class="ph" style="background-image:url('+r.photo+')"><em>'+cap+'</em></div>':'<div class="card" style="padding:18px 16px;text-align:center"><div class="sub">사진 없이 저장돼요</div></div>';
+ var ph='<div style="display:flex;gap:12px;align-items:center">'+(r.photo?'<div class="th" style="width:56px;height:56px;flex:none;background-image:url('+r.photo+')"></div>':'<div class="th" style="width:56px;height:56px;flex:none">'+ini(r.name)+'</div>')+'<div class="sub" style="font-size:12px;flex:1;min-width:0">'+(r.photo?(cap||'저장할 때 사진'):'사진 없이 저장돼요')+'</div></div>';
  var pbtn=r.mine?'':'<div class="two">'+'<button class="btn line" data-act="rvPhoto">사진 다시 찾기</button>'+(r.photo?'<button class="btn line" data-act="rvNoPhoto">사진 빼기</button>':'')+'</div>';
  return '<div class="scr" style="overflow-y:auto"><div class="edge"></div>'+back()+
  '<div><div class="eyebrow">REVIEW / BEFORE SAVE</div><div class="h1" style="font-size:28px">이대로 저장할까요?</div></div>'+
@@ -1153,7 +1153,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019c';
+var BUILD='20261019d';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
