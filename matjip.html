@@ -130,6 +130,22 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .destiny-wheel{display:flex;flex-direction:column;align-items:center;gap:16px}
 .destiny-emoji{font-size:60px;animation:destinySpin 1s linear infinite}
 .destiny-name{font-size:21px;font-weight:800;letter-spacing:-0.03em;min-height:28px;padding:12px 22px;border-radius:14px;background:var(--card);border:1px solid var(--line);animation:destinyPulse .4s ease-in-out infinite}
+.wait-wrap{display:flex;flex-direction:column;align-items:center;gap:22px}
+.wait-orb{position:relative;width:132px;height:132px;display:flex;align-items:center;justify-content:center}
+.wait-orb i{position:absolute;inset:0;border-radius:50%;border:2px solid var(--ink);opacity:0;animation:waitRing 2.4s ease-out infinite}
+.wait-orb i:nth-child(2){animation-delay:.8s}.wait-orb i:nth-child(3){animation-delay:1.6s}
+.wait-orb b{position:relative;width:92px;height:92px;border-radius:50%;background:var(--card);border:1px solid var(--line);box-shadow:0 6px 18px rgba(62,53,43,.16);display:flex;align-items:center;justify-content:center;font-size:44px;animation:waitBeat 1.2s ease-in-out infinite}
+.wait-orb em{position:absolute;font-style:normal;font-size:18px;animation:waitTwinkle 1.6s ease-in-out infinite}
+.wait-orb em:nth-of-type(1){left:-6px;top:6px}.wait-orb em:nth-of-type(2){right:-4px;top:-2px;animation-delay:.5s}.wait-orb em:nth-of-type(3){right:6px;bottom:-4px;animation-delay:1s}
+.wait-name{min-width:180px;text-align:center;font-size:20px;font-weight:800;letter-spacing:-0.03em;padding:12px 22px;border-radius:14px;background:var(--card);border:1px solid var(--line);filter:blur(2.2px);opacity:.75}
+.wait-msg{font-size:14px;color:var(--sub);text-align:center;min-height:20px;animation:waitFade .5s ease}
+.wait-dots span{display:inline-block;animation:waitDot 1.2s infinite}.wait-dots span:nth-child(2){animation-delay:.2s}.wait-dots span:nth-child(3){animation-delay:.4s}
+@keyframes waitRing{0%{transform:scale(.6);opacity:.35}100%{transform:scale(1.35);opacity:0}}
+@keyframes waitBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.09) rotate(-4deg)}}
+@keyframes waitTwinkle{0%,100%{opacity:.15;transform:scale(.6)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes waitFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes waitDot{0%,80%,100%{opacity:.2}40%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.wait-orb i,.wait-orb b,.wait-orb em{animation:none}.wait-orb i{display:none}}
 @keyframes destinySpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @keyframes destinyPulse{0%,100%{opacity:.5;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
 .sh{display:flex;align-items:baseline;justify-content:space-between;flex:none}
@@ -263,7 +279,7 @@ function ini(n){return esc((String(n).trim()[0]||'맛'))}
 function copy(t){try{navigator.clipboard.writeText(t).then(function(){toast('복사했어요')},fb)}catch(e){fb()}function fb(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('복사했어요')}catch(e){toast('복사하지 못했어요')}a.remove()}}
 
 /* ---------- location / geocoding ---------- */
-var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetFull:false,mapFull:false,destinyTok:0,shareBusy:false};
+var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetFull:false,mapFull:false,destinyTok:0,waitTok:0,shareBusy:false};
 
 function locate(){
  return new Promise(function(res){
@@ -464,12 +480,27 @@ async function destinyPick(excludeId){
   render();
  },wait);
 }
+function startWaitFx(cands,tok){
+ var msgs=['오늘 날씨와 시간을 살펴보는 중','배고픔 레벨을 재는 중','근처 후보를 하나씩 훑어보는 중','두근두근, 마지막 한 곳을 고르는 중'];
+ var names=cands.map(function(c){return c.name}),mi=-1,ni=0,tick=0;
+ function step(){
+  if(S.waitTok!==tok||!S.pickLoading){clearInterval(iv);return}
+  var n=$('#waitName'),m=$('#waitMsg');if(!n||!m){clearInterval(iv);return}
+  if(names.length){ni=(ni+1+Math.floor(Math.random()*Math.max(1,names.length-1)))%names.length;n.textContent=names[ni]}
+  if(tick%5===0&&mi<msgs.length-1){mi++;m.style.animation='none';void m.offsetWidth;m.style.animation='';m.innerHTML=msgs[mi]+'<span class="wait-dots"><span>.</span><span>.</span><span>.</span></span>'}
+  tick++;
+  var blur=Math.max(0,2.2-tick*0.05);n.style.filter='blur('+blur+'px)';n.style.opacity=String(Math.min(1,.75+tick*0.01));
+ }
+ var iv=setInterval(step,260);step();
+}
 async function runPick(exclude){
  S.pickDestiny=false;S.destinySpin=false;S.destinyTok++;
  var cands=pickCands();
  S.pickCands=cands;
  if(!cands.length){S.pickStep=1;S.pickRanked=[];render();return}
  S.pickStep=1;S.pickLoading=true;render();
+ var t0=Date.now(),wTok=++S.waitTok;
+ startWaitFx(cands,wTok);
  var pick=function(a,arr){return arr.length?arr.map(function(i){return a[i]}).join(', '):'상관없음'};
  var body={pick:{
   cands:cands.map(function(c){return {id:c.id,name:c.name,cat:cat(c.name),dist:c._d}}),
@@ -487,6 +518,8 @@ async function runPick(exclude){
   }
  }catch(e){}
  if(!ranked.length)ranked=cands.slice(0,3).map(function(c){return {place:c,reason:''}});
+ var left=3600-(Date.now()-t0);if(left>0)await new Promise(function(r){setTimeout(r,left)});
+ if(S.waitTok!==wTok)return;
  S.pickRanked=ranked;S.pickLoading=false;
  if(S.screen==='pick')render();
 }
@@ -544,7 +577,11 @@ function vPick(){
  if(S.pickLoading){
   return '<div class="scr"><div class="edge"></div>'+back()+
   '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">AI가 고르는 중…</div></div></div>'+
-  '<div class="grow"></div><div class="sub" style="text-align:center">취향에 맞는 곳을 찾고 있어요</div><div class="grow"></div></div>';
+  '<div class="grow"></div>'+
+  '<div class="wait-wrap"><div class="wait-orb"><i></i><i></i><i></i><b>🍽️</b><em>✨</em><em>✨</em><em>✨</em></div>'+
+  '<div class="wait-name" id="waitName">…</div>'+
+  '<div class="wait-msg" id="waitMsg"></div></div>'+
+  '<div class="grow"></div></div>';
  }
  if(S.destinySpin){
   return '<div class="scr"><div class="edge"></div>'+back()+
@@ -1153,7 +1190,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019d';
+var BUILD='20261019e';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
