@@ -300,8 +300,24 @@ async function pullSync(doRender){
  try{
   var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({room:{code:code,action:'load'}})});
   var j=await r.json();
-  if(j&&j.items){mergeFromServer(j.items);persist(true);if(doRender)render()}
+  if(j&&j.items){mergeFromServer(j.items);persist(true);if(doRender)render();fillMissingThumbs()}
  }catch(e){}
+}
+var fillBusy=false;
+async function fillMissingThumbs(){
+ if(fillBusy||!PLACE_PROXY)return;
+ fillBusy=true;
+ try{
+  var todo=places.filter(function(p){return p&&p.name&&!p.photo&&!(p.thumbTry&&Date.now()-p.thumbTry<86400000)}).slice(0,30),n=0;
+  for(var i=0;i<todo.length;i++){
+   var p=todo[i];
+   try{var t=await foodThumb(p.name,p.addr);p.thumbTry=Date.now();if(t&&!p.photo){p.photo=t.img;p.thumb=t.from;n++}}catch(e){}
+   if(n&&(n%4===0||i===todo.length-1)){persist(true);if(S.screen==='find')refreshFind(false);else if(S.screen==='home')render()}
+   await new Promise(function(r){setTimeout(r,250)});
+  }
+  if(n)persist(true);
+ }catch(e){}
+ fillBusy=false;
 }
 function byId(id){return places.filter(function(p){return p.id===id})[0]}
 
@@ -1375,6 +1391,7 @@ function loadNaver(){
 }
 render();
 if(isShared())pullSync(true);else maybeImport();
+setTimeout(fillMissingThumbs,1500);
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
 try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portrait').catch(function(){})}catch(e){}
 
@@ -1404,7 +1421,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261020h';
+var BUILD='20261020i';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
