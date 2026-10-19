@@ -104,6 +104,11 @@ button{border:0;background:none;padding:0;cursor:pointer}
 @keyframes cardIn{0%{opacity:0;transform:translateY(36px) scale(.9);filter:blur(6px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:none;filter:none}}
 .rev .pn{animation:pnPop .6s ease-out both;animation-delay:inherit}
 @keyframes pnPop{0%{transform:scale(2.4)}60%{transform:scale(.9)}100%{transform:scale(1)}}
+.phwrap{position:relative;flex:none;width:64px;height:64px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.phwrap:active{transform:scale(.95)}
+.phbadge{position:absolute;right:-5px;bottom:-5px;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.phwrap.busy .th{opacity:.4}
+.phwrap.busy .phbadge{animation:destinySpin .8s linear infinite}
 .stamp{display:inline-flex;border:1.5px solid var(--stamp);color:var(--stamp);border-radius:9px;padding:0 5px;font-size:10px;font-weight:700;transform:rotate(-6deg);margin-top:2px}
 .list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
 .empty{text-align:center;color:var(--sub);font-size:14px;line-height:1.7;padding:30px 10px}
@@ -754,8 +759,8 @@ function vDetail(){
  var spec=function(k,v){return '<div class="r"><div class="k">'+k+'</div><div class="v"></div><div>'+v+'</div></div>'};
  var srcL={camera:'촬영',album:'앨범 사진',name:'이름 입력',remote:'이름 입력',sheet:'시트에서 가져옴'}[p.src]||'';
  return '<div class="scr"><div class="edge"></div><div class="top" style="align-items:center">'+back()+'<button class="chip" data-act="edit">정보 수정</button></div>'+
- '<div style="display:flex;gap:14px;align-items:center">'+(p.photo?'<div class="th" style="width:64px;height:64px;flex:none;background-image:url('+p.photo+')"></div>':'<div class="th" style="width:64px;height:64px;flex:none">'+ini(p.name)+'</div>')+
- '<div style="flex:1;min-width:0"><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><div class="h1" style="font-size:28px">'+esc(p.name)+'</div>'+(p.photo&&p.thumb?'<div class="sub" style="font-size:11px;margin-top:2px">네이버 검색 사진 · 실제 매장과 다를 수 있어요</div>':'')+'</div></div>'+
+ '<div style="display:flex;gap:14px;align-items:center">'+'<div class="phwrap" data-act="rePhoto">'+(p.photo?'<div class="th" style="width:64px;height:64px;flex:none;background-image:url('+p.photo+')"></div>':'<div class="th" style="width:64px;height:64px;flex:none">'+ini(p.name)+'</div>')+'<span class="phbadge">↻</span></div>'+
+ '<div style="flex:1;min-width:0"><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><div class="h1" style="font-size:28px">'+esc(p.name)+'</div>'+(p.photo&&p.thumb?'<div class="sub" style="font-size:11px;margin-top:2px">네이버 검색 사진 · 사진을 누르면 다른 사진을 찾아요</div>':(p.photo?'':'<div class="sub" style="font-size:11px;margin-top:2px">사진을 누르면 찾아 와요</div>'))+'</div></div>'+
  (p.needsAddr?'<div class="warn"><span>위치가 아직 없어요</span><button data-act="fill">주소 채우기</button></div>':'')+
  '<div class="spec">'+spec('주 소',esc(p.addr||'-'))+
  '<div class="r"><div class="k">메 모</div><div class="v"></div><textarea id="memoEd" rows="2" placeholder="메모를 남겨요">'+esc(p.memo||'')+'</textarea></div>'+
@@ -1167,6 +1172,27 @@ async function rvPhoto(){
 function nvUrl(p){return p&&(p.naver||(p.name?naverLink(p.name,p.addr):''))||''}
 function naverLink(name,addr){return 'https://map.naver.com/p/search/'+encodeURIComponent((String(name||'').trim()+' '+(dongOf(addr)||String(addr||'').split(/\s+/)[1]||'')).trim())}
 function dongOf(addr){var m=String(addr||'').match(/([가-힣0-9]+(?:동|읍|면|가))(?:\s|$)/);return m?m[1]:''}
+var PH_VARIANTS=['맛집','','음식','메뉴','외관','내부','간판'];
+async function rePhoto(){
+ var p=byId(S.openId);if(!p||thumbBusy['re'+p.id])return;
+ if(p.photo&&!p.thumb&&!confirm('내가 올린 사진을 다른 사진으로 바꿀까요?'))return;
+ thumbBusy['re'+p.id]=1;
+ var w=document.querySelector('.phwrap');if(w)w.classList.add('busy');
+ toast('다른 사진을 찾는 중…');
+ var found=null;
+ try{
+  for(var k=0;k<PH_VARIANTS.length&&!found;k++){
+   p.phTry=((p.phTry||0)+1)%PH_VARIANTS.length;
+   var q=(String(p.name).trim()+' '+dongOf(p.addr)+' '+PH_VARIANTS[p.phTry]).replace(/\s+/g,' ').trim();
+   var r=await fetch(PLACE_PROXY+(PLACE_PROXY.indexOf('?')<0?'?':'&')+'img='+encodeURIComponent(q));var j=await r.json();
+   if(j&&j.img&&j.img!==p.photo)found=j.img;
+  }
+ }catch(e){}
+ delete thumbBusy['re'+p.id];
+ if(found){p.photo=found;p.thumb='img';persist();toast('새 사진으로 바꿨어요. 마음에 안 들면 다시 눌러 보세요')}
+ else toast('다른 사진을 찾지 못했어요');
+ if(S.screen==='detail'&&S.openId===p.id)render();
+}
 async function foodThumb(name,addr){
  if(!PLACE_PROXY||!name)return null;
  var q=(String(name).trim()+' '+dongOf(addr)+' 맛집').replace(/\s+/g,' ').trim();
@@ -1244,6 +1270,7 @@ document.addEventListener('click',function(e){
   case 'install':if(S.installEv){S.installEv.prompt();S.installEv=null;render()}break;
   case 'hideInstall':hideInstall();break;
   case 'find':doFind();break;
+  case 'rePhoto':rePhoto();break;
   case 'camShot':$('#fCam').click();break;
   case 'goPick':goPick();break;
   case 'pTaste':pickChoice('taste',+t.getAttribute('data-i'));break;
@@ -1377,7 +1404,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261020g';
+var BUILD='20261020h';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
