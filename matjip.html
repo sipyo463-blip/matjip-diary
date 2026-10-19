@@ -99,7 +99,10 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .pn.sm{width:22px;height:22px}
 .me{width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:0 0 0 7px rgba(62,53,43,.14)}
 .melab{position:absolute;left:10px;top:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
-.mapctrls{position:absolute;right:12px;bottom:calc(46% + 12px);z-index:600;display:flex;flex-direction:column;gap:10px}
+.mapctrls{position:absolute;right:12px;bottom:calc(46% + 12px);z-index:600;display:flex;flex-direction:column;gap:10px;transition:bottom .2s}
+.fwrap.mapfull .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
+.fwrap.mapfull #fmap{inset:0!important}
+.fwrap.mapfull .sheet,.fwrap.mapfull .fsearch{display:none}
 .locbtn{width:42px;height:42px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(62,53,43,.22);color:var(--ink)}
 .locbtn .ic{width:20px;height:20px}
 
@@ -251,7 +254,7 @@ function ini(n){return esc((String(n).trim()[0]||'맛'))}
 function copy(t){try{navigator.clipboard.writeText(t).then(function(){toast('복사했어요')},fb)}catch(e){fb()}function fb(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('복사했어요')}catch(e){toast('복사하지 못했어요')}a.remove()}}
 
 /* ---------- location / geocoding ---------- */
-var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetFull:false,destinyTok:0,shareBusy:false};
+var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetFull:false,mapFull:false,destinyTok:0,shareBusy:false};
 
 function locate(){
  return new Promise(function(res){
@@ -637,11 +640,11 @@ function vConfirm(){
  alt+'</div>';
 }
 function vFind(){
- return '<div class="fwrap"><div id="fmap"></div>'+
+ return '<div class="fwrap'+(S.mapFull?' mapfull':'')+'"><div id="fmap"></div>'+
  '<div class="fsearch"><div class="field" style="height:50px"><input id="qFind" value="'+esc(S.q)+'" placeholder="이름·동네·메모 검색" autocomplete="off"></div>'+
  '<div class="chips" id="chips"></div></div>'+
  '<div class="mapctrls">'+
- '<button class="locbtn" data-act="fitAll" title="전체보기"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 0 1-1v-4"/></svg></button>'+
+ '<button class="locbtn" id="fitBtn" data-act="toggleMapFull" title="'+(S.mapFull?'지도 접기':'지도 크게 보기')+'"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(S.mapFull?'<path d="M9 4v4a1 1 0 0 1-1 1H4M15 4v4a1 1 0 0 0 1 1h4M9 20v-4a1 1 0 0 0-1-1H4M15 20v-4a1 1 0 0 1 1-1h4"/>':'<path d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 0 1-1v-4"/>')+'</svg></button>'+
  '<button class="locbtn" data-act="myLoc" title="내 위치"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
  '</div>'+
  '<div class="sheet'+(S.sheetFull?' full':'')+'"><div class="grab" data-act="toggleFull"></div><div class="sh"><div style="display:flex;align-items:baseline;gap:6px"><b>가까운 맛집</b><span class="sub" id="cnt"></span></div><button class="link" data-act="toggleFull" id="fullBtn" style="font-size:12px">'+(S.sheetFull?'접기':'전체보기')+'</button></div><div class="list grow" id="plist"></div>'+
@@ -813,6 +816,16 @@ function toggleSheetFull(){
  var b=$('#fullBtn');if(b)b.textContent=S.sheetFull?'접기':'전체보기';
  if(S.sheetFull){var qi=$('#qFind');if(qi)qi.focus()}
 }
+function toggleMapFull(){
+ S.mapFull=!S.mapFull;
+ var w=document.querySelector('.fwrap');if(w)w.classList.toggle('mapfull',S.mapFull);
+ var b=$('#fitBtn');
+ if(b){
+  b.title=S.mapFull?'지도 접기':'지도 크게 보기';
+  b.innerHTML='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(S.mapFull?'<path d="M9 4v4a1 1 0 0 1-1 1H4M15 4v4a1 1 0 0 0 1 1h4M9 20v-4a1 1 0 0 0-1-1H4M15 20v-4a1 1 0 0 1 1-1h4"/>':'<path d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 0 1-1v-4"/>')+'</svg>';
+ }
+ setTimeout(function(){S.map&&mSize(S.map)},220);
+}
 function afterFind(){
  var ctr=S.pos?[S.pos.lat,S.pos.lng]:[37.5665,126.978];
  S.map=mkMap('fmap',ctr,14);
@@ -973,7 +986,7 @@ document.addEventListener('click',function(e){
  switch(a){
   case 'back':history.back();break;
   case 'goSave':S.editMode=false;if(S.screen==='find'){killMap();S.screen='save';S.stack=['home'];render()}else{S.query='';S.fillId=null;go('save')}break;
-  case 'goFind':S.q='';S.chip='near';S.hl=null;S.sheetFull=false;go('find');break;
+  case 'goFind':S.q='';S.chip='near';S.hl=null;S.sheetFull=false;S.mapFull=false;go('find');break;
   case 'goShare':go('share');break;
   case 'shareCopy':shareCopy();break;
   case 'shareSend':shareSend();break;
@@ -1009,10 +1022,10 @@ document.addEventListener('click',function(e){
   case 'eSave':eSave();break;
   case 'pinOk':pinOk();break;
   case 'myLoc':myLoc();break;
-  case 'fitAll':fitAll();break;
+  case 'toggleMapFull':toggleMapFull();break;
   case 'toggleFull':toggleSheetFull();break;
   case 'fill':var p=byId(S.openId);S.editMode=false;S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
-  case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';S.sheetFull=false;go('find');break;
+  case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';S.sheetFull=false;S.mapFull=false;go('find');break;
   case 'copy':var c=byId(S.openId);copy(c.addr||c.name);break;
   case 'visit':var v=byId(S.openId);v.visited=!v.visited;persist();render();break;
   case 'del':if(confirm('이 맛집을 삭제할까요?')){places=places.filter(function(x){return x.id!==S.openId});persist();history.back()}break;
