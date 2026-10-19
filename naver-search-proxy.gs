@@ -13,6 +13,8 @@
 function doGet(e) {
   // 음식점 사진: ?img=검색어  (네이버 이미지 검색 API, 스크립트 속성 IMG_ID / IMG_SECRET 사용)
   if (e && e.parameter && e.parameter.img) return imgThumb_(String(e.parameter.img).trim());
+  // 공유방 사진 내려받기: ?pic=드라이브파일ID  (우리 폴더 안의 이미지 파일만)
+  if (e && e.parameter && e.parameter.pic) return picGet_(String(e.parameter.pic).trim());
   var q = ((e && e.parameter && e.parameter.q) || '').trim();
   if (!q) return out_({ items: [] });
 
@@ -86,6 +88,7 @@ function doPost(e) {
     if (b.pick) return out_(pick_(b.pick));
     if (b.destiny) return out_(destiny_(b.destiny));
     if (b.room) return out_(room_(b.room));
+    if (b.photoUp) return out_(picUp_(b.photoUp));
     var m = String(b.ocr || '').match(/^data:(image\/[a-z+]+);base64,(.+)$/);
     if (!m) return out_({ error: 'bad image' });
     var k = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_KEY');
@@ -219,7 +222,7 @@ function room_(p) {
     if (!Array.isArray(data)) return { error: 'bad data' };
     // 사진(photo/thumb)은 용량이 커서 공유에서는 제외
     var slim = data.map(function (d) {
-      return { id: d.id, name: d.name, addr: d.addr, lat: d.lat, lng: d.lng, memo: d.memo, naver: d.naver, visited: !!d.visited, createdAt: d.createdAt };
+      return { id: d.id, name: d.name, addr: d.addr, lat: d.lat, lng: d.lng, memo: d.memo, naver: d.naver, visited: !!d.visited, createdAt: d.createdAt, pic: d.pic || null };
     });
     var json = JSON.stringify(slim);
     while (json.length > 8500 && slim.length > 1) { slim.pop(); json = JSON.stringify(slim); }
@@ -248,4 +251,44 @@ function sign_(model, k, m) {
     var raw = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
     var t = raw.split('\n').map(function (s) { return s.replace(/[*"'`]/g, '').trim(); }).filter(function (s) { return s; })[0] || '';
     return { name: /^NONE/i.test(t) ? '' : t, raw: raw.slice(0, 80) };
+}
+
+
+// ---- 공유방 사진 보관 (구글 드라이브 폴더 'matjip-diary-photos') ----
+function picFolder_() {
+  var props = PropertiesService.getScriptProperties();
+  var fid = props.getProperty('PIC_FOLDER');
+  if (fid) { try { return DriveApp.getFolderById(fid); } catch (e) {} }
+  var f = DriveApp.createFolder('matjip-diary-photos');
+  props.setProperty('PIC_FOLDER', f.getId());
+  return f;
+}
+// 올리기: { code, id, data:'data:image/jpeg;base64,...' }  → { pic: 파일ID }
+function picUp_(p) {
+  var code = String(p.code || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{4,12}$/.test(code)) return { error: 'bad code' };
+  var pid = String(p.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+  if (!pid) return { error: 'bad id' };
+  var m = String(p.data || '').match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
+  if (!m || m[2].length > 120000) return { error: 'bad image' };
+  var folder = picFolder_();
+  var name = code + '_' + pid + '.jpg';
+  var old = folder.getFilesByName(name);
+  while (old.hasNext()) old.next().setTrashed(true);
+  var blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], name);
+  var file = folder.createFile(blob);
+  return { pic: file.getId() };
+}
+// 내려받기: 폴더 안의 이미지 파일만 허용
+function picGet_(fileId) {
+  try {
+    if (!/^[A-Za-z0-9_-]{10,}$/.test(fileId)) return out_({ error: 'bad id' });
+    var file = DriveApp.getFileById(fileId);
+    var folder = picFolder_(), ok = false, ps = file.getParents();
+    while (ps.hasNext()) { if (ps.next().getId() === folder.getId()) { ok = true; break; } }
+    if (!ok) return out_({ error: 'forbidden' });
+    var blob = file.getBlob(), ct = blob.getContentType();
+    if (String(ct).indexOf('image/') !== 0) return out_({ error: 'not image' });
+    return out_({ img: 'data:' + ct + ';base64,' + Utilities.base64Encode(blob.getBytes()) });
+  } catch (err) { return out_({ error: 'not found' }); }
 }

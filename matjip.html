@@ -276,8 +276,28 @@ function genRoomCode(){var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',s='';for(var
 function getRoomCode(){try{return localStorage.getItem(ROOM_KEY)||null}catch(e){return null}}
 function isShared(){return !!getRoomCode()}
 function ensureRoomCode(){var c=getRoomCode();if(!c){c=genRoomCode();try{localStorage.setItem(ROOM_KEY,c)}catch(e){}}return c}
+var picBusy=false;
+function picKeyOf(ph){return ph?ph.length+':'+ph.slice(-24):''}
+function shrinkData(src,w){return new Promise(function(res){var im=new Image();im.onload=function(){try{res(shrink(im,w))}catch(e){res(null)}};im.onerror=function(){res(null)};im.src=src})}
+async function uploadPhotos(code){
+ if(picBusy)return;picBusy=true;
+ try{
+  var todo=places.filter(function(p){return p&&p.photo&&picKeyOf(p.photo)!==p.picKey&&p.picGot!==p.pic&&(!p.pic||p.picKey)}).slice(0,8),n=0;
+  for(var i=0;i<todo.length;i++){
+   var p=todo[i],d=await shrinkData(p.photo,200);if(!d)continue;
+   try{
+    var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({photoUp:{code:code,id:p.id,data:d}})});
+    var j=await r.json();
+    if(j&&j.pic){p.pic=j.pic;p.picKey=picKeyOf(p.photo);n++}else if(j&&j.error==='bad image'){p.picKey=picKeyOf(p.photo)}else break;
+   }catch(e){break}
+  }
+  if(n)persist(true);
+ }catch(e){}
+ picBusy=false;
+}
 async function pushSync(){
  var code=getRoomCode();if(!code)return;
+ await uploadPhotos(code);
  try{await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({room:{code:code,action:'save',data:places}})})}catch(e){}
 }
 function mergeFromServer(items){
@@ -287,7 +307,7 @@ function mergeFromServer(items){
   return {
    id:it.id,name:it.name||'',addr:it.addr||'',lat:(it.lat!=null?it.lat:null),lng:(it.lng!=null?it.lng:null),
    memo:it.memo||'',naver:it.naver||loc.naver||null,visited:!!it.visited||!!(loc.stamps&&loc.stamps.length),createdAt:it.createdAt||loc.createdAt||Date.now(),
-   photo:loc.photo||null,thumb:loc.thumb||null,stamps:loc.stamps||null,src:loc.src||'share',needsAddr:(it.lat==null)
+   photo:loc.photo||null,thumb:loc.thumb||null,stamps:loc.stamps||null,pic:it.pic||loc.pic||null,picKey:loc.picKey||null,picGot:loc.picGot||null,thumbTry:loc.thumbTry||null,src:loc.src||'share',needsAddr:(it.lat==null)
   };
  });
  var serverIds={};items.forEach(function(it){serverIds[it.id]=1});
@@ -303,14 +323,19 @@ async function pullSync(doRender){
   if(j&&j.items){mergeFromServer(j.items);persist(true);if(doRender)render();fillMissingThumbs()}
  }catch(e){}
 }
+function needPic(p){return !!(p.pic&&!p.picKey&&p.picGot!==p.pic&&(!p.photo||p.thumb))}
 var fillBusy=false;
 async function fillMissingThumbs(){
  if(fillBusy||!PLACE_PROXY)return;
  fillBusy=true;
  try{
-  var todo=places.filter(function(p){return p&&p.name&&!p.photo&&!(p.thumbTry&&Date.now()-p.thumbTry<86400000)}).slice(0,30),n=0;
+  var todo=places.filter(function(p){return p&&p.name&&((needPic(p))||(!p.photo&&!(p.thumbTry&&Date.now()-p.thumbTry<86400000)))}).slice(0,30),n=0;
   for(var i=0;i<todo.length;i++){
    var p=todo[i];
+   if(needPic(p)){
+    try{var rr=await fetch(PLACE_PROXY+(PLACE_PROXY.indexOf('?')<0?'?':'&')+'pic='+encodeURIComponent(p.pic));var jj=await rr.json();
+     if(jj&&jj.img){p.photo=jj.img;p.thumb='shared';p.picGot=p.pic;n++;continue}}catch(e){}
+   }
    try{var t=await foodThumb(p.name,p.addr);p.thumbTry=Date.now();if(t&&!p.photo){p.photo=t.img;p.thumb=t.from;n++}}catch(e){}
    if(n&&(n%4===0||i===todo.length-1)){persist(true);if(S.screen==='find')refreshFind(false);else if(S.screen==='home')render()}
    await new Promise(function(r){setTimeout(r,250)});
@@ -1421,7 +1446,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261020i';
+var BUILD='20261020j';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
