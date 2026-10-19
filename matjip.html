@@ -85,6 +85,15 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .meta{font-size:12px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rt{text-align:right;font-size:13px;font-weight:700;flex:none}
 .rt.g{color:var(--sub);font-weight:400}
+.stampcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 12px 10px;display:flex;flex-direction:column;gap:10px;flex:none}
+.stgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.slot{aspect-ratio:1;border-radius:50%;border:1.5px dashed var(--line);background:transparent;display:flex;align-items:center;justify-content:center;position:relative;color:var(--sub);font-size:13px;font-weight:700;padding:0;-webkit-tap-highlight-color:transparent}
+.slot:active{transform:scale(.94)}
+.slot.on{border-color:transparent}
+.mark{position:absolute;inset:2px;border-radius:50%;border:2.5px solid var(--stamp);box-shadow:inset 0 0 0 3px var(--card),inset 0 0 0 4.5px var(--stamp);color:var(--stamp);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;transform:rotate(var(--r,0deg));opacity:.9}
+.mark b{font-size:12px;font-weight:900;letter-spacing:-.04em}.mark i{font-style:normal;font-size:10px;font-weight:700}
+.mark.new{animation:stampIn .45s cubic-bezier(.2,.9,.3,1.15)}
+@keyframes stampIn{0%{transform:scale(2.6) rotate(calc(var(--r) + 20deg));opacity:0}55%{transform:scale(.88) rotate(var(--r));opacity:1}100%{transform:scale(1) rotate(var(--r));opacity:.9}}
 .stamp{display:inline-flex;border:1.5px solid var(--stamp);color:var(--stamp);border-radius:9px;padding:0 5px;font-size:10px;font-weight:700;transform:rotate(-6deg);margin-top:2px}
 .list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
 .empty{text-align:center;color:var(--sub);font-size:14px;line-height:1.7;padding:30px 10px}
@@ -262,8 +271,8 @@ function mergeFromServer(items){
   var loc=byIdLocal[it.id]||{};
   return {
    id:it.id,name:it.name||'',addr:it.addr||'',lat:(it.lat!=null?it.lat:null),lng:(it.lng!=null?it.lng:null),
-   memo:it.memo||'',naver:it.naver||loc.naver||null,visited:!!it.visited,createdAt:it.createdAt||loc.createdAt||Date.now(),
-   photo:loc.photo||null,thumb:loc.thumb||null,src:loc.src||'share',needsAddr:(it.lat==null)
+   memo:it.memo||'',naver:it.naver||loc.naver||null,visited:!!it.visited||!!(loc.stamps&&loc.stamps.length),createdAt:it.createdAt||loc.createdAt||Date.now(),
+   photo:loc.photo||null,thumb:loc.thumb||null,stamps:loc.stamps||null,src:loc.src||'share',needsAddr:(it.lat==null)
   };
  });
  var serverIds={};items.forEach(function(it){serverIds[it.id]=1});
@@ -710,6 +719,18 @@ function vFind(){
  '<div class="sheet'+(S.sheetMode!=='mid'?' '+S.sheetMode:'')+'"><div class="grab"></div><div class="sh"><div style="display:flex;align-items:baseline;gap:6px"><b id="sheetTitle">가까운 맛집</b><span class="sub" id="cnt"></span></div><button class="link" data-act="toggleFull" id="fullBtn" style="font-size:12px">'+(S.sheetMode==='high'?'접기':'전체보기')+'</button><button class="link" data-act="clearHl" id="clearHlBtn" style="font-size:12px;display:none">목록으로</button></div><div class="list grow" id="plist"></div>'+
  '</div></div>';
 }
+function stampsOf(p){return Array.isArray(p.stamps)?p.stamps.slice():(p.visited?[p.createdAt||Date.now()]:[])}
+function stampCardHtml(p){
+ var st=stampsOf(p),h='';
+ for(var i=0;i<8;i++){
+  if(i<st.length){
+   var d=new Date(st[i]),r=((Math.floor(st[i]/1000)%25)-12);
+   h+='<button class="slot on" data-act="stamp" data-i="'+i+'" aria-label="찍은 도장"><span class="mark'+(S.newStamp===i?' new':'')+'" style="--r:'+r+'deg"><b>다녀옴</b><i>'+(d.getMonth()+1)+'.'+d.getDate()+'</i></span></button>';
+  }else h+='<button class="slot" data-act="stamp" data-i="'+i+'" aria-label="빈 도장칸">'+(i+1)+'</button>';
+ }
+ var last=st.length?new Date(st[st.length-1]):null;
+ return '<div class="stampcard"><div class="stgrid">'+h+'</div><div class="sub" style="font-size:12px;text-align:center">'+(st.length?st.length+'번 방문 · 마지막 '+(last.getMonth()+1)+'월 '+last.getDate()+'일':'다녀올 때마다 빈 칸을 눌러 도장을 찍어요')+'</div></div>';
+}
 function vDetail(){
  var p=byId(S.openId);if(!p)return vHome();
  var d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null;
@@ -723,8 +744,8 @@ function vDetail(){
  '<div class="r"><div class="k">메 모</div><div class="v"></div><textarea id="memoEd" rows="2" placeholder="메모를 남겨요">'+esc(p.memo||'')+'</textarea></div>'+
  spec('저 장',dateLabel(p.createdAt)+' | '+srcL)+(d!=null?spec('거 리',fmt(d)):'')+'</div>'+
 (nvUrl(p)?'<a class="nvl" href="'+esc(nvUrl(p))+'" target="_blank" rel="noopener">N 네이버 리뷰 보기</a>':'')+
+ stampCardHtml(p)+
  '<div class="grow"></div>'+
- '<div class="two"><button class="btn line" data-act="copy">주소 복사</button><button class="btn line" data-act="visit">'+(p.visited?'다녀왔어요 ✓':'다녀왔어요')+'</button></div>'+
  '<button class="link" data-act="del">삭제</button></div>';
 }
 function srow(k,h){return '<div class="r"><div class="k">'+k+'</div><div class="v"></div>'+h+'</div>'}
@@ -1240,6 +1261,13 @@ document.addEventListener('click',function(e){
   case 'fill':var p=byId(S.openId);S.editMode=false;S.fillId=p.id;S.query=((p.addr?p.addr+' ':'')+p.name).trim();S.cands=[];S.photoGps=null;S.photo=null;go('fill');break;
   case 'showMap':var q=byId(S.openId);if(q.lat==null){toast('위치가 없어요. 주소 채우기를 눌러 주세요');break}S.focusId=q.id;S.hl=q.id;S.q='';S.chip='near';S.sheetMode='mid';S.mapFull=false;go('find');break;
   case 'copy':var c=byId(S.openId);copy(c.addr||c.name);break;
+  case 'stamp':
+   var sp=byId(S.openId);if(!sp)break;
+   var sts=stampsOf(sp),si=+t.getAttribute('data-i');
+   if(si<sts.length){if(confirm('이 도장을 지울까요?')){sts.splice(si,1);sp.stamps=sts;sp.visited=sts.length>0;persist();render()}}
+   else if(sts.length>=8){toast('도장판이 가득 찼어요 🎉')}
+   else{sts.push(Date.now());sp.stamps=sts;sp.visited=true;persist();S.newStamp=sts.length-1;try{navigator.vibrate&&navigator.vibrate([20,40,30])}catch(e){}render();S.newStamp=null}
+   break;
   case 'visit':var v=byId(S.openId);v.visited=!v.visited;persist();render();break;
   case 'del':if(confirm('이 맛집을 삭제할까요?')){places=places.filter(function(x){return x.id!==S.openId});persist();history.back()}break;
  }
@@ -1302,7 +1330,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019m';
+var BUILD='20261019n';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
