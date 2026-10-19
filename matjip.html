@@ -1256,7 +1256,7 @@ document.addEventListener('click',function(e){
   case 'open':S.openId=id;S.hl=id;go('detail');break;
   case 'edit':startEditPlace(S.openId);break;
   case 'lpEdit':closeLpMenu();startEditPlace(id);break;
-  case 'lpDel':closeLpMenu();if(confirm('이 맛집을 삭제할까요?')){places=places.filter(function(x){return x.id!==id});persist();if(S.hl===id)S.hl=null;if(S.screen==='find')refreshFind(false);else render()}break;
+  case 'lpDel':closeLpMenu();places=places.filter(function(x){return x.id!==id});persist();if(S.hl===id)S.hl=null;toast('삭제했어요');if(S.screen==='find')refreshFind(false);else render();break;
   case 'lpClose':closeLpMenu();break;
   case 'eFind':var ed=S.draft;S.fillId=S.openId;S.editMode=true;S.query=(ed.q||ed.name||'').trim();S.cands=[];S.photoGps=null;S.photo=null;S.nearO=ed.lat!=null?{lat:ed.lat,lng:ed.lng}:null;doFind();break;
   case 'ePin':S.pinFor='edit';S.pinAddr='';go('pin');break;
@@ -1277,7 +1277,7 @@ document.addEventListener('click',function(e){
    else{sts.push(Date.now());sp.stamps=sts;sp.visited=true;persist();S.newStamp=sts.length-1;try{navigator.vibrate&&navigator.vibrate([20,40,30])}catch(e){}render();S.newStamp=null}
    break;
   case 'visit':var v=byId(S.openId);v.visited=!v.visited;persist();render();break;
-  case 'del':if(confirm('이 맛집을 삭제할까요?')){places=places.filter(function(x){return x.id!==S.openId});persist();history.back()}break;
+  case 'del':places=places.filter(function(x){return x.id!==S.openId});persist();toast('삭제했어요');history.back();break;
  }
 });
 document.addEventListener('click',function(e){if(e.target.id==='lpMenu')closeLpMenu()});
@@ -1339,7 +1339,7 @@ render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
 try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portrait').catch(function(){})}catch(e){}
-var BUILD='20261019p';
+var BUILD='20261019q';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
