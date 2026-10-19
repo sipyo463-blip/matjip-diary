@@ -101,7 +101,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .melab{position:absolute;left:10px;top:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
 .mapctrls{position:absolute;right:12px;bottom:calc(46% + 12px);z-index:600;display:flex;flex-direction:column;gap:10px;transition:bottom .2s}
 .fwrap[data-sheet=low] #fmap{inset:0!important}
-.fwrap[data-sheet=low] .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 104px)}
+.fwrap[data-sheet=low] .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 44px)}
 .fwrap[data-sheet=high] .mapctrls,.fwrap.dragging .mapctrls{opacity:0;pointer-events:none}
 .fwrap.mapfull .mapctrls{bottom:calc(env(safe-area-inset-bottom,0px) + 12px);opacity:1;pointer-events:auto}
 .fwrap.mapfull.hascard .mapctrls{display:none}
@@ -127,11 +127,19 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .chips{display:flex;gap:8px}
 .chip{height:34px;padding:0 14px;border-radius:9px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:700;display:flex;align-items:center}
 .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.sheet{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:600;background:var(--paper);border-radius:14px 14px 0 0;border-top:1px solid var(--line);padding:10px 18px 0;display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 18px rgba(62,53,43,.10);}
+.sheet{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:600;background:var(--paper);border-radius:14px 14px 0 0;border-top:1px solid var(--line);padding:10px 18px env(safe-area-inset-bottom,0px);display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 18px rgba(62,53,43,.10);box-sizing:border-box}
 .sheet.high{height:calc(100% - env(safe-area-inset-top,0px) - 112px)}
-.sheet.low{height:calc(env(safe-area-inset-bottom,0px) + 92px)}
+.sheet.low{height:calc(env(safe-area-inset-bottom,0px) + 30px)}
 .sheet.low .sh,.sheet.low .list{display:none}
 .sheet .sh{touch-action:none}
+.fwrap.kb .sheet{height:62%!important}
+.fwrap.kb .sheet .sh,.fwrap.kb .sheet .list{display:flex}
+.fwrap.kb #fmap{inset:0 0 62% 0!important}
+.fwrap.kb .chips,.fwrap.kb .mapctrls{display:none}
+.row{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#lpMenu{position:fixed;inset:0;z-index:2000;background:rgba(40,32,24,.42);display:flex;align-items:flex-end}
+#lpMenu .box{width:100%;background:var(--paper);border-radius:18px 18px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:10px}
+#lpMenu .tt{font-size:16px;font-weight:800;text-align:center;padding:2px 0 6px}
 .grab{align-self:stretch;height:26px;margin:-10px -18px -4px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab;flex:none}
 .grab::before{content:'';width:36px;height:4px;border-radius:2px;background:var(--line)}
 .destiny-wheel{display:flex;flex-direction:column;align-items:center;gap:16px}
@@ -701,7 +709,7 @@ function vFind(){
  '</div>'+
  '<div class="mapcard" id="mapcard"></div>'+
  '<div class="sheet'+(S.sheetMode!=='mid'?' '+S.sheetMode:'')+'"><div class="grab"></div><div class="sh"><div style="display:flex;align-items:baseline;gap:6px"><b id="sheetTitle">가까운 맛집</b><span class="sub" id="cnt"></span></div><button class="link" data-act="toggleFull" id="fullBtn" style="font-size:12px">'+(S.sheetMode==='high'?'접기':'전체보기')+'</button><button class="link" data-act="clearHl" id="clearHlBtn" style="font-size:12px;display:none">목록으로</button></div><div class="list grow" id="plist"></div>'+
- '<div class="tabs"><button data-act="goSave">저장</button><button class="on">꺼내기</button></div></div></div>';
+ '</div></div>';
 }
 function vDetail(){
  var p=byId(S.openId);if(!p)return vHome();
@@ -868,7 +876,7 @@ function refreshFind(fit){
  var pts=[];
  a.forEach(function(p){if(p.lat==null)return;pts.push([p.lat,p.lng]);
   var on=S.hl===p.id;
-  S.mk.push(mAdd(M,p.lat,p.lng,pinHtml('',on?'on':'sm'),on?28:22,function(){S.hl=p.id;refreshFind(false);var r=$('#r_'+p.id);if(r)r.scrollIntoView({block:'nearest'})},on?500:0));
+  S.mk.push(mAdd(M,p.lat,p.lng,pinHtml('',on?'on':'sm'),on?28:22,function(){blurFind();S.hl=p.id;refreshFind(false);var r=$('#r_'+p.id);if(r)r.scrollIntoView({block:'nearest'});setTimeout(function(){var q=byId(S.hl);if(q&&!S.mapFull)centerSelected(q)},380)},on?500:0));
  });
  S.findPts=pts.slice();
  if(S.pos)S.mk.push(mAdd(M,S.pos.lat,S.pos.lng,ME,14,null,0));
@@ -918,6 +926,53 @@ function centerSelected(p){
  if(panelH>40)setTimeout(function(){mPanBy(M,0,Math.min(panelH/2,170))},30);
 }
 var sheetTimer=null;
+function blurFind(){var a=document.activeElement;if(a&&a.id==='qFind')a.blur()}
+(function(){
+ var vv=window.visualViewport,mt=null;
+ function fit(){
+  var w=document.querySelector('.fwrap');if(!w||!vv)return;
+  var kb=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop));
+  w.style.bottom=kb>80?kb+'px':'';
+  clearTimeout(mt);mt=setTimeout(function(){S.map&&mSize(S.map)},120);
+ }
+ if(vv){vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
+ document.addEventListener('focusin',function(e){
+  if(e.target.id!=='qFind')return;
+  var w=document.querySelector('.fwrap');if(w)w.classList.add('kb');
+  setTimeout(function(){S.map&&mSize(S.map)},250);
+ });
+ document.addEventListener('focusout',function(e){
+  if(e.target.id!=='qFind')return;
+  var w=document.querySelector('.fwrap');if(w){w.classList.remove('kb');w.style.bottom=''}
+  setTimeout(function(){S.map&&mSize(S.map)},250);
+ });
+})();
+/* 길게 눌러 편집/삭제 */
+function startEditPlace(id){var ep=byId(id);if(!ep)return;S.openId=id;S.draft={name:ep.name,addr:ep.addr||'',memo:ep.memo||'',lat:ep.lat,lng:ep.lng,q:ep.name,addr0:ep.addr||'',loc:false};go('edit')}
+function closeLpMenu(){var m=$('#lpMenu');if(m)m.remove()}
+function openLpMenu(id){
+ var p=byId(id);if(!p)return;closeLpMenu();
+ var m=document.createElement('div');m.id='lpMenu';
+ m.innerHTML='<div class="box"><div class="tt">'+esc(p.name)+'</div><button class="btn" data-act="lpEdit" data-id="'+p.id+'">정보 수정</button><button class="btn line" data-act="lpDel" data-id="'+p.id+'">삭제</button><button class="link" data-act="lpClose">취소</button></div>';
+ document.body.appendChild(m);
+}
+(function(){
+ var t=null,sx=0,sy=0;
+ function cancel(){clearTimeout(t);t=null}
+ document.addEventListener('pointerdown',function(e){
+  var r=e.target.closest&&e.target.closest('.row[data-act="open"][data-id]');
+  if(!r)return;cancel();sx=e.clientX;sy=e.clientY;
+  var id=r.getAttribute('data-id');
+  t=setTimeout(function(){t=null;S.lpUntil=Date.now()+900;try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}openLpMenu(id)},520);
+ });
+ document.addEventListener('pointermove',function(e){if(t&&(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10))cancel()});
+ document.addEventListener('pointerup',cancel);document.addEventListener('pointercancel',cancel);
+ document.addEventListener('scroll',cancel,true);
+ document.addEventListener('contextmenu',function(e){if(e.target.closest&&e.target.closest('.row'))e.preventDefault()});
+ document.addEventListener('click',function(e){
+  if(S.lpUntil&&Date.now()<S.lpUntil&&e.target.closest&&e.target.closest('.row')){e.stopPropagation();e.preventDefault()}
+ },true);
+})();
 function sheetModeH(sh,m){var cl=sh.className,tr=sh.style.transition,ih=sh.style.height;sh.style.transition='none';sh.style.height='';sh.className='sheet'+(m==='mid'?'':' '+m);var h=sh.offsetHeight;sh.className=cl;sh.style.height=ih;sh.style.transition=tr;return h}
 function setSheetMode(m){
  var sh=document.querySelector('.sheet'),w=document.querySelector('.fwrap');if(!sh)return;
@@ -934,7 +989,6 @@ function setSheetMode(m){
 }
 function toggleSheetFull(){
  setSheetMode(S.sheetMode==='high'?'mid':'high');
- if(S.sheetMode==='high'){var qi=$('#qFind');if(qi)qi.focus()}
 }
 (function(){
  var d=null;
@@ -1172,7 +1226,10 @@ document.addEventListener('click',function(e){
   case 'rvNoPhoto':if(S.rv){S.rv.photo=null;S.rv.thumb=null;render()}break;
   case 'chip':S.chip=t.getAttribute('data-c');refreshFind(false);break;
   case 'open':S.openId=id;S.hl=id;go('detail');break;
-  case 'edit':var ep=byId(S.openId);if(!ep)break;S.draft={name:ep.name,addr:ep.addr||'',memo:ep.memo||'',lat:ep.lat,lng:ep.lng,q:ep.name,addr0:ep.addr||'',loc:false};go('edit');break;
+  case 'edit':startEditPlace(S.openId);break;
+  case 'lpEdit':closeLpMenu();startEditPlace(id);break;
+  case 'lpDel':closeLpMenu();if(confirm('이 맛집을 삭제할까요?')){places=places.filter(function(x){return x.id!==id});persist();if(S.hl===id)S.hl=null;if(S.screen==='find')refreshFind(false);else render()}break;
+  case 'lpClose':closeLpMenu();break;
   case 'eFind':var ed=S.draft;S.fillId=S.openId;S.editMode=true;S.query=(ed.q||ed.name||'').trim();S.cands=[];S.photoGps=null;S.photo=null;S.nearO=ed.lat!=null?{lat:ed.lat,lng:ed.lng}:null;doFind();break;
   case 'ePin':S.pinFor='edit';S.pinAddr='';go('pin');break;
   case 'eSave':eSave();break;
@@ -1188,6 +1245,7 @@ document.addEventListener('click',function(e){
   case 'del':if(confirm('이 맛집을 삭제할까요?')){places=places.filter(function(x){return x.id!==S.openId});persist();history.back()}break;
  }
 });
+document.addEventListener('click',function(e){if(e.target.id==='lpMenu')closeLpMenu()});
 document.addEventListener('input',function(e){
  var i=e.target.id;
  if(i==='qName')S.query=e.target.value;
@@ -1206,7 +1264,8 @@ document.addEventListener('change',function(e){
 });
 document.addEventListener('keydown',function(e){
  if(e.key!=='Enter')return;var i=e.target.id;
- if(i==='qName'){e.preventDefault();e.target.blur();doFind()}
+ if(i==='qFind'){e.preventDefault();e.target.blur()}
+ else if(i==='qName'){e.preventDefault();e.target.blur();doFind()}
  else if(i==='qPin'){e.preventDefault();e.target.blur();pinSearch()}
  else if(i==='eQ'){e.preventDefault();e.target.blur();var b=document.querySelector('[data-act=eFind]');if(b)b.click()}
 });
@@ -1244,7 +1303,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019j';
+var BUILD='20261019k';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
