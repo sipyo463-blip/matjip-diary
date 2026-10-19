@@ -517,10 +517,10 @@ function startWaitFx(cands,tok){
   if(S.waitTok!==tok||!S.pickLoading){clearInterval(iv);return}
   var n=$('#waitName'),m=$('#waitMsg');if(!n||!m){clearInterval(iv);return}
   if(names.length){ni=(ni+1+Math.floor(Math.random()*Math.max(1,names.length-1)))%names.length;n.textContent=names[ni]}
-  if(tick%5===0&&mi<msgs.length-1){mi++;m.style.animation='none';void m.offsetWidth;m.style.animation='';m.innerHTML=msgs[mi]+'<span class="wait-dots"><span>.</span><span>.</span><span>.</span></span>'}
+  if(tick%11===0&&mi<msgs.length-1){mi++;m.style.animation='none';void m.offsetWidth;m.style.animation='';m.innerHTML=msgs[mi]+'<span class="wait-dots"><span>.</span><span>.</span><span>.</span></span>'}
   tick++;
  }
- var iv=setInterval(step,260);step();
+ var iv=setInterval(step,85);step();
 }
 async function runPick(exclude){
  S.pickDestiny=false;S.destinySpin=false;S.destinyTok++;
@@ -547,7 +547,7 @@ async function runPick(exclude){
   }
  }catch(e){}
  if(!ranked.length)ranked=cands.slice(0,3).map(function(c){return {place:c,reason:''}});
- var left=3600-(Date.now()-t0);if(left>0)await new Promise(function(r){setTimeout(r,left)});
+ var left=3300-(Date.now()-t0);if(left>0)await new Promise(function(r){setTimeout(r,left)});
  if(S.waitTok!==wTok)return;
  S.pickRanked=ranked;S.pickLoading=false;
  if(S.screen==='pick')render();
@@ -1372,7 +1372,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261019z';
+var BUILD='20261020a';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
