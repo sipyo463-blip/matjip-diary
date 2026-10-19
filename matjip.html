@@ -557,6 +557,14 @@ function shareCopy(){copy(shareLink())}
 function shareSend(){
  if(navigator.share){navigator.share({title:'나의 맛집 다이어리',text:'내 맛집 리스트를 같이 써요!',url:shareLink()}).catch(function(){})}
 }
+async function quickShare(){
+ if(!navigator.share){go('share');return}
+ if(S.shareBusy)return;
+ S.shareBusy=true;
+ try{ensureRoomCode();await pushSync()}catch(e){}
+ S.shareBusy=false;
+ try{await navigator.share({title:'나의 맛집 다이어리',text:'내 맛집 리스트를 같이 써요!',url:shareLink()})}catch(e){}
+}
 async function startShare(){
  if(S.shareBusy)return;
  S.shareBusy=true;render();
@@ -867,7 +875,7 @@ function listData(){
 function placeRowHtml(p,idAttr){
  var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
  var rt=p._d!=null?'<div class="rt">'+fmt(p._d)+'</div>':'<div class="rt g" style="font-size:12px">위치 없음</div>';
- return '<button class="row sel" data-act="open" data-id="'+p.id+'"'+(idAttr?' id="r_'+p.id+'"':'')+'>'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div><div class="meta" style="margin-top:2px">'+dateLabel(p.createdAt)+' 추가'+'</div></div><div style="text-align:right">'+rt+(p.visited?'<span class="stamp">다녀옴</span>':'')+'</div></button>';
+ return '<button class="row sel" data-act="open" data-id="'+p.id+'"'+(idAttr?' id="r_'+p.id+'"':'')+'>'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div><div class="meta" style="margin-top:2px">'+dateLabel(p.createdAt)+' 추가'+'</div></div><div style="text-align:right">'+rt+(stampsOf(p).length?'<span class="stamp">'+stampsOf(p).length+'회 방문</span>':'')+'</div></button>';
 }
 function refreshFind(fit){
  var a=listData();
@@ -888,7 +896,7 @@ function refreshFind(fit){
   $('#plist').innerHTML=a.length?a.map(function(p){
    var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
    var rt=p._d!=null?'<div class="rt">'+fmt(p._d)+'</div>':'<div class="rt g" style="font-size:12px">위치 없음</div>';
-   return '<button class="row" data-act="open" data-id="'+p.id+'" id="r_'+p.id+'">'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div></div><div style="text-align:right">'+rt+(p.visited?'<span class="stamp">다녀옴</span>':'')+'</div></button>';
+   return '<button class="row" data-act="open" data-id="'+p.id+'" id="r_'+p.id+'">'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div></div><div style="text-align:right">'+rt+(stampsOf(p).length?'<span class="stamp">'+stampsOf(p).length+'회 방문</span>':'')+'</div></button>';
   }).join(''):'<div class="empty">'+(places.length?'찾는 곳이 없어요.':'아직 저장한 곳이 없어요.<br>길에서 발견하면 저장하기를 눌러요.')+'</div>';
  }
  var M=S.map;if(!M)return;
@@ -923,7 +931,7 @@ function updateMapCard(){
  var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
  mc.innerHTML='<button class="mcx" data-act="clearMapCard">×</button>'+
   '<div class="mcbody"><div style="display:flex;gap:12px;align-items:flex-start">'+th+
-  '<div class="mid"><div class="mcname">'+esc(p.name)+(p.visited?' <span class="stamp" style="font-size:11px">다녀옴</span>':'')+'</div>'+
+  '<div class="mid"><div class="mcname">'+esc(p.name)+(stampsOf(p).length?' <span class="stamp" style="font-size:11px">'+stampsOf(p).length+'회 방문</span>':'')+'</div>'+
   '<div class="mcmeta">'+dateLabel(p.createdAt)+' 추가</div>'+
   '<div class="mcmeta">'+rt+esc(cat(p.name))+(p.memo?' · '+esc(p.memo):(p.addr?' · '+esc(p.addr):''))+'</div></div></div>'+
   '<div class="mcrow">'+(nvUrl(p)?'<a class="nvl" href="'+esc(nvUrl(p))+'" target="_blank" rel="noopener">N 네이버 리뷰</a>':'')+'<button class="btn" data-act="open" data-id="'+p.id+'">자세히 보기</button></div></div>';
@@ -1217,7 +1225,7 @@ document.addEventListener('click',function(e){
   case 'back':history.back();break;
   case 'goSave':S.editMode=false;if(S.screen==='find'){killMap();S.screen='save';S.stack=['home'];render()}else{S.query='';S.fillId=null;go('save')}break;
   case 'goFind':S.q='';S.chip='near';S.hl=null;S.sheetMode='mid';S.mapFull=false;go('find');break;
-  case 'goShare':go('share');break;
+  case 'goShare':quickShare();break;
   case 'shareCopy':shareCopy();break;
   case 'shareSend':shareSend();break;
   case 'startShare':startShare();break;
@@ -1330,7 +1338,7 @@ function loadNaver(){
 render();
 if(isShared())pullSync(true);else maybeImport();
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
-var BUILD='20261019n';
+var BUILD='20261019o';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
