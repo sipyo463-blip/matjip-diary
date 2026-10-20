@@ -609,6 +609,19 @@ function startWaitFx(cands,tok){
  }
  var iv=setInterval(step,85);step();
 }
+function localReason(p,i){
+ var d=p._d!=null?fmt(p._d):'',c=cat(p.name)||'맛집',w=S.weather||{},wet=w.code!=null&&w.code>=51,hot=w.temp!=null&&w.temp>=27,cold=w.temp!=null&&w.temp<=8;
+ var near=p._d!=null&&p._d<1000;
+ var sets=[
+  [d+' 거리면 신발 끈 묶는 사이에 도착해요. 오늘 후보 중 발품이 제일 덜 드는 '+c+'예요.',
+   '고민은 짧게, 걸음은 가볍게. '+d+'이면 배가 먼저 앞장서요.'],
+  [wet?'비 오는 날엔 멀리 갈수록 손해예요. 우산 쓰고 '+d+'이면 충분해요.':cold?'쌀쌀한 날엔 걷는 길이 짧을수록 좋죠. '+d+'이면 몸이 식기 전에 도착해요.':hot?'더운 날엔 이동이 짧은 게 곧 행복이에요. '+d+'이면 땀 흘리기 전에 도착해요.':'날씨 좋은 날엔 산책 삼아 '+d+' 정도는 가볍게 다녀올 만해요. 도착하면 '+c+'가 기다려요.'],
+  ['오늘의 세 번째 카드는 '+c+'예요. '+d+'이면 "그냥 가볼까?" 하기 딱 좋은 거리죠.',
+   '아직 안 가봤다면 오늘이 데뷔하기 좋은 날이에요. '+d+'이면 부담 없이 가볼 수 있어요.']
+ ];
+ var s=sets[Math.min(i,2)];
+ return s[(String(p.name).length+i)%s.length];
+}
 async function runPick(exclude){
  S.pickDestiny=false;S.destinySpin=false;S.destinyTok++;
  var cands=pickCands();
@@ -627,9 +640,17 @@ async function runPick(exclude){
  }};
  var ranked=[];
  try{
-  var ac=new AbortController(),to=setTimeout(function(){ac.abort()},4200);
-  var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac.signal});
-  var j=await r.json();clearTimeout(to);
+  var fetchP=fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(function(r){return r.json()}).catch(function(){return null});
+  var j=await Promise.race([fetchP,new Promise(function(r){setTimeout(function(){r('timeout')},6000)})]);
+  if(j==='timeout'){
+   j=null;
+   // 늦게 도착한 AI 문구는 같은 가게의 설명만 바꿔 줘요
+   fetchP.then(function(jj){
+    if(!jj||!jj.items||S.waitTok!==wTok||S.screen!=='pick'||!S.pickRanked.length)return;
+    var ch=false;jj.items.forEach(function(it){S.pickRanked.forEach(function(x){if(String(x.place.id)===String(it.id)&&it.reason){x.reason=it.reason;ch=true}})});
+    if(ch)render();
+   });
+  }
   if(j&&j.items&&j.items.length){
    ranked=j.items.map(function(it){var c=cands.find(function(x){return String(x.id)===String(it.id)});return c?{place:c,reason:it.reason||''}:null}).filter(Boolean);
   }
@@ -638,7 +659,7 @@ async function runPick(exclude){
   while(ranked.length<Math.min(3,cands.length)&&pool2.length)ranked.push({place:pool2.shift(),reason:''});
  }catch(e){}
  if(!ranked.length)ranked=cands.slice(0,3).map(function(c){return {place:c,reason:''}});
- ranked.forEach(function(x){if(!x.reason){var d=x.place._d;x.reason='여기서 '+(d!=null?fmt(d)+' 거리, ':'')+'지금 가기 딱 좋은 후보예요.'}});
+ ranked.forEach(function(x,i){if(!x.reason)x.reason=localReason(x.place,i)});
  var left=2200-(Date.now()-t0);if(left>0)await new Promise(function(r){setTimeout(r,left)});
  if(S.waitTok!==wTok)return;
  S.pickRanked=ranked;S.pickLoading=false;S.pickReveal=true;
@@ -1488,7 +1509,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261020q';
+var BUILD='20261020r';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
