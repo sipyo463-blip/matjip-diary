@@ -695,7 +695,7 @@ function vPick(){
  }).join('');
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">오늘은 여기 어때요?</div></div></div>'+
- wline+'<div class="list" style="gap:10px">'+cards+'</div>'+
+ wline+'<div class="list" style="gap:10px;overflow:'+(S.pickReveal?'hidden':'')+';padding-bottom:4px">'+cards+'</div>'+
  '<button class="btn line'+(S.pickReveal?' rev':'')+'" data-act="pickReroll" style="flex:none'+(S.pickReveal?';animation-delay:3.6s':'')+'">다른 곳 추천</button>'+
  '<button class="link'+(S.pickReveal?' rev':'')+'" data-act="pickRetry" style="flex:none'+(S.pickReveal?';animation-delay:3.8s':'')+'">다시 고르기</button><div class="grow"></div></div>';
 }
@@ -1446,7 +1446,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261020k';
+var BUILD='20261020l';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
