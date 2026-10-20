@@ -96,9 +96,9 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .mark b{font-size:12px;font-weight:900;letter-spacing:-.04em}.mark i{font-style:normal;font-size:10px;font-weight:700}
 .mark.new{animation:stampIn .45s cubic-bezier(.2,.9,.3,1.15)}
 @keyframes stampIn{0%{transform:scale(2.6) rotate(calc(var(--r) + 20deg));opacity:0}55%{transform:scale(.88) rotate(var(--r));opacity:1}100%{transform:scale(1) rotate(var(--r));opacity:.9}}
-.fscroll{position:fixed;right:4px;width:40px;height:52px;z-index:900;display:none;touch-action:none;-webkit-tap-highlight-color:transparent}
-.fscroll i{position:absolute;right:0;top:0;bottom:0;width:26px;border-radius:5px;background:var(--ink);opacity:.55;box-shadow:0 2px 8px rgba(62,53,43,.3);display:flex;align-items:center;justify-content:center;transition:opacity .15s,transform .15s}
-.fscroll i:before{content:"";width:12px;height:16px;background:linear-gradient(var(--paper) 0 2px,transparent 2px 7px,var(--paper) 7px 9px,transparent 9px 14px,var(--paper) 14px 16px,transparent 16px);opacity:.9}
+.fscroll{position:fixed;right:4px;width:32px;height:40px;z-index:900;display:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+.fscroll i{position:absolute;right:0;top:0;bottom:0;width:18px;border-radius:4px;background:var(--ink);opacity:.55;box-shadow:0 2px 8px rgba(62,53,43,.3);display:flex;align-items:center;justify-content:center;transition:opacity .15s,transform .15s}
+.fscroll i:before{content:"";width:9px;height:12px;background:linear-gradient(var(--paper) 0 2px,transparent 2px 5px,var(--paper) 5px 7px,transparent 7px 10px,var(--paper) 10px 12px,transparent 12px);opacity:.9}
 .fscroll.on i{opacity:.95;transform:scale(1.1)}
 .rev{opacity:0;animation:cardIn .7s cubic-bezier(.2,.9,.25,1.2) both}
 @keyframes cardIn{0%{opacity:0;transform:translateY(36px) scale(.9);filter:blur(6px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:none;filter:none}}
@@ -687,11 +687,11 @@ function vPick(){
  var cards=S.pickRanked.map(function(r,i){
   var p=r.place;
   var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
-  return '<button class="row'+(S.pickReveal?' rev':'')+'" data-act="pickOpen" data-i="'+i+'" style="align-items:flex-start'+(S.pickReveal?';animation-delay:'+(0.45+i*1.0)+'s':'')+'">'+
+  return '<button class="row'+(S.pickReveal?' rev':'')+'" data-act="pickOpen" data-i="'+i+'" style="align-items:flex-start;flex-wrap:wrap'+(S.pickReveal?';animation-delay:'+(0.45+i*1.0)+'s':'')+'">'+
    '<div class="pn sm" style="flex:none;margin-top:2px">'+(i+1)+'</div>'+th+
    '<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+(p._d!=null?' · '+fmt(p._d):'')+'</div>'+
    (r.desc?'<div class="sub" style="margin-top:4px;white-space:normal">'+esc(r.desc)+'</div>':'')+
-   (r.reason?'<div class="sub" style="margin-top:4px;white-space:normal">💬 '+esc(r.reason)+'</div>':'')+'</div></button>';
+   '</div>'+(r.reason?'<div class="sub" style="flex:0 0 100%;margin-top:8px;white-space:normal;text-align:left">💬 '+esc(r.reason)+'</div>':'')+'</button>';
  }).join('');
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">PICK FOR ME</div><div class="h1" style="font-size:26px">오늘은 여기 어때요?</div></div></div>'+
@@ -1422,7 +1422,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
 
 (function(){
  var el=document.createElement('div');el.className='fscroll';el.innerHTML='<i></i>';document.body.appendChild(el);
- var drag=false,H=52;
+ var drag=false,H=40;
  function list(){return S.screen==='find'&&!S.mapFull&&S.sheetMode!=='low'?document.getElementById('plist'):null}
  function track(l){var r=l.getBoundingClientRect();return {top:r.top,h:r.height}}
  function sync(){
@@ -1446,7 +1446,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261020l';
+var BUILD='20261020m';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
