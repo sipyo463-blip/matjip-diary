@@ -119,7 +119,7 @@ function pick_(p) {
     '\n시간대에 안 맞는 곳(아침에 술집 등)은 피해 ' + n + '곳을 골라 순위대로 한 줄씩 답해: 순위|id|한마디\n' +
     '한마디=센스 있는 친구의 기발한 농담, 30자 이내, 존댓말, 이모지 최대1, 서로 다른 비유(상황극/과장/말장난/의인화), 이름·종류·거리·날씨·시간에서만 소재를 찾고 모르는 맛·메뉴는 지어내지 마. 다른 말 금지.';
   var body = {
-    model: 'claude-haiku-5-5', max_tokens: 260,
+    model: 'claude-haiku-5-5', max_tokens: 300, thinking: { type: 'disabled' },
     messages: [{ role: 'user', content: [{ type: 'text', text: q }] }]
   };
   var items = [], rawOrig = '';
