@@ -610,14 +610,14 @@ function startWaitFx(cands,tok){
  var iv=setInterval(step,85);step();
 }
 function localReason(p,i){
- var d=p._d!=null?fmt(p._d):'',c=cat(p.name)||'맛집',w=S.weather||{},wet=w.code!=null&&w.code>=51,hot=w.temp!=null&&w.temp>=27,cold=w.temp!=null&&w.temp<=8;
- var near=p._d!=null&&p._d<1000;
+ var c=cat(p.name)||'맛집',w=S.weather||{},wet=w.code!=null&&w.code>=51,hot=w.temp!=null&&w.temp>=27,cold=w.temp!=null&&w.temp<=8;
  var sets=[
-  [d+' 거리면 신발 끈 묶는 사이에 도착해요. 오늘 후보 중 발품이 제일 덜 드는 '+c+'예요.',
-   '고민은 짧게, 걸음은 가볍게. '+d+'이면 배가 먼저 앞장서요.'],
-  [wet?'비 오는 날엔 멀리 갈수록 손해예요. 우산 쓰고 '+d+'이면 충분해요.':cold?'쌀쌀한 날엔 걷는 길이 짧을수록 좋죠. '+d+'이면 몸이 식기 전에 도착해요.':hot?'더운 날엔 이동이 짧은 게 곧 행복이에요. '+d+'이면 땀 흘리기 전에 도착해요.':'날씨 좋은 날엔 산책 삼아 '+d+' 정도는 가볍게 다녀올 만해요. 도착하면 '+c+'가 기다려요.'],
-  ['오늘의 세 번째 카드는 '+c+'예요. '+d+'이면 "그냥 가볼까?" 하기 딱 좋은 거리죠.',
-   '아직 안 가봤다면 오늘이 데뷔하기 좋은 날이에요. '+d+'이면 부담 없이 가볼 수 있어요.']
+  ['고민은 짧게, 결정은 빠르게. 오늘의 1순위 '+c+'로 가면 배가 먼저 박수쳐요.',
+   '메뉴 고르다 지치기 전에 '+c+'로 정하는 게 오늘의 현명한 선택이에요.'],
+  [wet?'비 오는 날엔 따뜻한 한 끼가 보약이죠. '+c+'에서 눅눅한 기분을 말려 보세요.':cold?'쌀쌀한 날엔 속부터 데워야죠. '+c+'가 오늘 컨디션을 올려줄 거예요.':hot?'더운 날엔 입맛 돌아오는 곳이 최고예요. '+c+'에서 기운 충전해 보세요.':'날씨 좋은 날엔 맛집 한 곳이 하루를 더 반짝이게 해요. 오늘은 '+c+'예요.',
+   '오늘 같은 날 '+c+'는 "잘 골랐다" 소리 듣기 좋은 선택이에요.'],
+  ['오늘의 세 번째 카드는 '+c+'예요. 아직 안 가봤다면 오늘이 데뷔하기 딱 좋은 날이에요.',
+   '두 곳이 고민된다면 '+c+'로 반전을 노려보세요. 의외의 단골이 생길지도 몰라요.']
  ];
  var s=sets[Math.min(i,2)];
  return s[(String(p.name).length+i)%s.length];
@@ -823,7 +823,7 @@ function vConfirm(){
  var ref=S.photoGps||S.pos,hasMap=ref||S.cands.length;
  var none=!S.cands.length?'<div class="empty">찾지 못했어요.<br>동네를 같이 적으면 더 잘 찾아요.</div>':'';
  var mainBtn=S.cands.length?
-  '<button class="btn" style="'+(S.editMode?'':'width:110px;flex:none')+'" data-act="confirmSave">'+(S.editMode?'이 위치로 바꾸기':'저장')+'</button>':
+  '<button class="btn" style="'+(S.editMode?'':'width:110px;flex:none')+'" data-act="confirmSave">'+(S.editMode?'이 위치로 바꾸기':'확인')+'</button>':
   '<button class="btn" style="'+(S.editMode?'':'width:110px;flex:none')+'" data-act="saveHere">이름만 저장</button>';
  var alt=S.cands.length?'<button class="link" data-act="saveHere">목록에 없어요 · 이름만 저장</button>':'';
  return '<div class="scr"><div class="edge"></div>'+back()+
@@ -1509,7 +1509,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261020r';
+var BUILD='20261021a';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
