@@ -128,6 +128,7 @@ function pick_(p) {
     headers: { 'x-api-key': k, 'anthropic-version': '2023-06-01' },
     payload: JSON.stringify(body), muteHttpExceptions: true
   });
+  if (r.getResponseCode() !== 200) rawOrig = 'HTTP ' + r.getResponseCode() + ' ' + r.getContentText().slice(0, 200);
   if (r.getResponseCode() === 200) {
     var cs = JSON.parse(r.getContentText()).content || [];
     rawOrig = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
