@@ -268,8 +268,45 @@ var places=[];
 try{places=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){places=[]}
 var syncTimer=null;
 function persist(skipSync){
- try{localStorage.setItem(KEY,JSON.stringify(places))}catch(e){toast('저장 공간이 가득 찼어요. 사진이 많으면 일부를 지워주세요')}
+ try{localStorage.setItem(KEY,JSON.stringify(places))}catch(e){rescueSpace()}
  if(!skipSync&&isShared()){if(syncTimer)clearTimeout(syncTimer);syncTimer=setTimeout(pushSync,600)}
+}
+
+/* ---------- 사진은 링크로, 저장 공간 절약 ---------- */
+function safeUrl(u){return String(u).replace(/[()'"\s<>]/g,function(c){return '%'+c.charCodeAt(0).toString(16).toUpperCase()})}
+function probeImg(u,ms){return new Promise(function(res){var im=new Image(),t=setTimeout(function(){im.onload=im.onerror=null;res(false)},ms||3500);im.onload=function(){clearTimeout(t);res(im.naturalWidth>20)};im.onerror=function(){clearTimeout(t);res(false)};im.src=u})}
+async function imgSearch(q,not){
+ var base=PLACE_PROXY+(PLACE_PROXY.indexOf('?')<0?'?':'&')+'img='+encodeURIComponent(q);
+ try{
+  var j=await (await fetch(base+'&u=1')).json();
+  var us=(j&&j.urls)||[];
+  for(var i=0;i<us.length;i++){var s=safeUrl(us[i]);if(s===not)continue;if(await probeImg(s))return s}
+ }catch(e){}
+ try{var j2=await (await fetch(base)).json();if(j2&&j2.img&&j2.img!==not)return j2.img}catch(e){}
+ return null;
+}
+var cpBusy=false,cpMsgShown=false;
+async function compressPhotos(){
+ if(cpBusy)return 0;cpBusy=true;var n=0,saved=0;
+ try{
+  var todo=places.filter(function(p){return p&&p.photo&&p.photo.indexOf('data:')===0&&p.photo.length>9000}).slice(0,80);
+  for(var i=0;i<todo.length;i++){
+   var p=todo[i],old=p.photo,d=await shrinkData(old,200);
+   if(d&&d.length<old.length*0.8){saved+=old.length-d.length;if(p.picKey===picKeyOf(old))p.picKey=picKeyOf(d);p.photo=d;n++}
+   if(n&&n%20===0)persist(true);
+  }
+  if(n){persist(true);if(S.screen==='home'||S.screen==='find')render()}
+ }catch(e){}
+ cpBusy=false;return n;
+}
+function rescueSpace(){
+ toast('저장 공간을 정리하는 중…');
+ compressPhotos().then(function(){
+  try{localStorage.setItem(KEY,JSON.stringify(places));toast('사진을 줄여서 저장 공간을 확보했어요');return}catch(e){}
+  // 그래도 부족하면 인터넷에서 다시 찾을 수 있는 검색 사진은 비워 두고 링크로 다시 받아요
+  places.forEach(function(p){if(p&&p.photo&&p.photo.indexOf('data:')===0&&(p.thumb==='img'||p.thumb==='shared')){p.photo=null;p.thumb=null;p.thumbTry=null}});
+  try{localStorage.setItem(KEY,JSON.stringify(places));toast('검색 사진은 링크로 다시 불러올게요');fillMissingThumbs()}catch(e){toast('저장 공간이 가득 찼어요. 내가 올린 사진 일부를 지워주세요')}
+ });
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function genRoomCode(){var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',s='';for(var i=0;i<6;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s}
@@ -282,7 +319,7 @@ function shrinkData(src,w){return new Promise(function(res){var im=new Image();i
 async function uploadPhotos(code){
  if(picBusy)return;picBusy=true;
  try{
-  var todo=places.filter(function(p){return p&&p.photo&&picKeyOf(p.photo)!==p.picKey&&p.picGot!==p.pic&&(!p.pic||p.picKey)}).slice(0,8),n=0;
+  var todo=places.filter(function(p){return p&&p.photo&&p.photo.indexOf('data:')===0&&picKeyOf(p.photo)!==p.picKey&&p.picGot!==p.pic&&(!p.pic||p.picKey)}).slice(0,8),n=0;
   for(var i=0;i<todo.length;i++){
    var p=todo[i],d=await shrinkData(p.photo,200);if(!d)continue;
    try{
@@ -1157,7 +1194,7 @@ async function doFind(){
  }
  S.sel=0;S.memo=S.memo||'';go('confirm');
 }
-function addPlace(o){var p=Object.assign({id:uid(),name:'',addr:'',lat:null,lng:null,memo:'',src:'name',photo:null,visited:false,createdAt:Date.now(),needsAddr:false},o);places.unshift(p);persist();return p}
+function addPlace(o){var p=Object.assign({id:uid(),name:'',addr:'',lat:null,lng:null,memo:'',src:'name',photo:null,visited:false,createdAt:Date.now(),needsAddr:false},o);places.unshift(p);persist();setTimeout(compressPhotos,800);return p}
 function finishSave(msg){S.query='';S.memo='';S.photo=null;S.photoGps=null;S.cands=[];S.fillId=null;toast(msg||'저장했어요');go('home',{reset:true})}
 async function confirmSave(){
  var c=S.cands[S.sel];if(!c)return;
@@ -1230,8 +1267,7 @@ async function rePhoto(){
   for(var k=0;k<PH_VARIANTS.length&&!found;k++){
    p.phTry=((p.phTry||0)+1)%PH_VARIANTS.length;
    var q=(String(p.name).trim()+' '+dongOf(p.addr)+' '+PH_VARIANTS[p.phTry]).replace(/\s+/g,' ').trim();
-   var r=await fetch(PLACE_PROXY+(PLACE_PROXY.indexOf('?')<0?'?':'&')+'img='+encodeURIComponent(q));var j=await r.json();
-   if(j&&j.img&&j.img!==p.photo)found=j.img;
+   found=await imgSearch(q,p.photo);
   }
  }catch(e){}
  delete thumbBusy['re'+p.id];
@@ -1242,8 +1278,8 @@ async function rePhoto(){
 async function foodThumb(name,addr){
  if(!PLACE_PROXY||!name)return null;
  var q=(String(name).trim()+' '+dongOf(addr)+' 맛집').replace(/\s+/g,' ').trim();
- try{var r=await fetch(PLACE_PROXY+(PLACE_PROXY.indexOf('?')<0?'?':'&')+'img='+encodeURIComponent(q));var j=await r.json();if(j&&j.img)return {img:j.img,from:'img'}}catch(e){}
- return null;
+ var s=await imgSearch(q,null);
+ return s?{img:s,from:'img'}:null;
 }
 var thumbBusy={};
 function ensureThumb(p){
@@ -1451,7 +1487,8 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261020p';
+setTimeout(compressPhotos,2500);
+var BUILD='20261020q';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){

@@ -12,7 +12,7 @@
  */
 function doGet(e) {
   // 음식점 사진: ?img=검색어  (네이버 이미지 검색 API, 스크립트 속성 IMG_ID / IMG_SECRET 사용)
-  if (e && e.parameter && e.parameter.img) return imgThumb_(String(e.parameter.img).trim());
+  if (e && e.parameter && e.parameter.img) return imgThumb_(String(e.parameter.img).trim(), e.parameter.u);
   // 공유방 사진 내려받기: ?pic=드라이브파일ID  (우리 폴더 안의 이미지 파일만)
   if (e && e.parameter && e.parameter.pic) return picGet_(String(e.parameter.pic).trim());
   var q = ((e && e.parameter && e.parameter.q) || '').trim();
@@ -56,7 +56,7 @@ function out_(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function imgThumb_(q) {
+function imgThumb_(q, urlOnly) {
   if (!q) return out_({ error: 'empty' });
   var props = PropertiesService.getScriptProperties();
   // 이미지 검색은 별도 Application 키(IMG_ID / IMG_SECRET)를 사용
@@ -67,6 +67,10 @@ function imgThumb_(q) {
     { headers: hdr, muteHttpExceptions: true });
   if (res.getResponseCode() !== 200) return out_({ error: 'image ' + res.getResponseCode(), body: res.getContentText().slice(0, 200) });
   var items = JSON.parse(res.getContentText()).items || [];
+  if (urlOnly) {
+    var urls = items.map(function (x) { return x.thumbnail; }).filter(function (u) { return u && String(u).indexOf('https://') === 0; });
+    return urls.length ? out_({ urls: urls }) : out_({ error: 'no image' });
+  }
   for (var k = 0; k < items.length; k++) {
     var t = items[k].thumbnail;
     if (!t) continue;
