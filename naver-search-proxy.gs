@@ -13,6 +13,8 @@
 function doGet(e) {
   // 음식점 사진: ?img=검색어  (네이버 이미지 검색 API, 스크립트 속성 IMG_ID / IMG_SECRET 사용)
   if (e && e.parameter && e.parameter.img) return imgThumb_(String(e.parameter.img).trim(), e.parameter.u);
+  // 리뷰 글 조회(블로그/카페): ?rv=검색어
+  if (e && e.parameter && e.parameter.rv) return reviews_(String(e.parameter.rv).trim());
   // 공유방 사진 내려받기: ?pic=드라이브파일ID  (우리 폴더 안의 이미지 파일만)
   if (e && e.parameter && e.parameter.pic) return picGet_(String(e.parameter.pic).trim());
   var q = ((e && e.parameter && e.parameter.q) || '').trim();
@@ -54,6 +56,29 @@ function deg_(v) {
 function out_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function reviews_(q) {
+  var props = PropertiesService.getScriptProperties();
+  var keys = [['NAVER', props.getProperty('NAVER_ID'), props.getProperty('NAVER_SECRET')], ['IMG', props.getProperty('IMG_ID'), props.getProperty('IMG_SECRET')]];
+  var result = {};
+  ['blog', 'cafearticle', 'kin'].forEach(function (kind) {
+    keys.forEach(function (k) {
+      if (!k[1] || !k[2] || result[kind] && result[kind].items) return;
+      try {
+        var res = UrlFetchApp.fetch('https://naverapihub.apigw.ntruss.com/search/v1/' + kind + '?display=5&sort=sim&query=' + encodeURIComponent(q),
+          { headers: { 'X-NCP-APIGW-API-KEY-ID': k[1], 'X-NCP-APIGW-API-KEY': k[2] }, muteHttpExceptions: true });
+        var code = res.getResponseCode();
+        if (code === 200) {
+          var items = (JSON.parse(res.getContentText()).items || []).map(function (x) {
+            return { t: String(x.title || '').replace(/<[^>]+>/g, ''), d: String(x.description || '').replace(/<[^>]+>/g, '').slice(0, 140) };
+          });
+          result[kind] = { key: k[0], items: items };
+        } else if (!result[kind]) result[kind] = { err: code + ' ' + res.getContentText().slice(0, 120) };
+      } catch (err) { result[kind] = { err: String(err).slice(0, 100) }; }
+    });
+  });
+  return out_(result);
 }
 
 function imgThumb_(q, urlOnly) {
