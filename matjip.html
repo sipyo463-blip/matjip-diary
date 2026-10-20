@@ -399,13 +399,15 @@ function copy(t){try{navigator.clipboard.writeText(t).then(function(){toast('복
 var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetMode:'mid',mapFull:false,destinyTok:0,waitTok:0,shareBusy:false};
 
 function locate(){
+ var ok=function(p,res){S.pos={lat:p.coords.latitude,lng:p.coords.longitude};try{localStorage.setItem('matjip_lastpos',JSON.stringify(S.pos))}catch(e){}
+   if(!S.posLabel)rev(S.pos.lat,S.pos.lng).then(function(r){if(r){S.posLabel=r.dong;var e=$('#loc');if(e)e.textContent=S.posLabel}}).catch(function(){});
+   res(S.pos)};
  return new Promise(function(res){
   if(!navigator.geolocation){res(null);return}
-  navigator.geolocation.getCurrentPosition(function(p){
-   S.pos={lat:p.coords.latitude,lng:p.coords.longitude};
-   if(!S.posLabel)rev(S.pos.lat,S.pos.lng).then(function(r){if(r){S.posLabel=r.dong;var e=$('#loc');if(e)e.textContent=S.posLabel}}).catch(function(){});
-   res(S.pos);
-  },function(){res(null)},{enableHighAccuracy:true,timeout:9000,maximumAge:60000});
+  navigator.geolocation.getCurrentPosition(function(p){ok(p,res)},function(){
+   // 실내 등에서 정확한 위치가 늦으면 대략적인 위치로 한 번 더 시도해요
+   navigator.geolocation.getCurrentPosition(function(p){ok(p,res)},function(){res(null)},{enableHighAccuracy:false,timeout:8000,maximumAge:600000});
+  },{enableHighAccuracy:true,timeout:6000,maximumAge:120000});
  });
 }
 var lastNomi=0;
@@ -528,6 +530,10 @@ var TASTES=['한식','중식','일식','양식','고기','분식','카페·디�
 var HUNGERS=['가볍게','적당히','든든하게'];
 var FEELS=['편안하게','신나게','위로가 필요해','색다르게'];
 async function fetchWeather(lat,lng){
+ for(var n=0;n<2;n++){var w=await fetchWeather1(lat,lng);if(w&&w.temp!=null)return w;await sleep(700)}
+ return null;
+}
+async function fetchWeather1(lat,lng){
  try{var r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lng+'&current=temperature_2m,weather_code&timezone=auto');var j=await r.json();var c=j.current||{};return {temp:c.temperature_2m,code:c.weather_code}}catch(e){return null}
 }
 function wxDesc(code){
@@ -549,8 +555,15 @@ async function goPick(){
  S.pickStep=0;S.pickTaste=[];S.pickHunger=[];S.pickFeel=[];
  S.pickCands=[];S.pickRanked=[];S.pickLoading=false;S.weather=null;S.pickDestiny=false;S.destinySpin=false;S.destinyTok++;
  go('pick');
+ S.wxDone=false;
  if(!S.pos)await locate();
- if(S.pos){S.weather=await fetchWeather(S.pos.lat,S.pos.lng);if(S.screen==='pick')render()}
+ if(!S.pos){try{var lp=JSON.parse(localStorage.getItem('matjip_lastpos')||'null');if(lp&&lp.lat!=null){S.pos=lp;S.posStale=true}}catch(e){}}
+ // 위치를 못 얻어도 날씨는 저장한 맛집들의 중심 좌표로 대신 확인해요 (날씨는 동네 단위라 거의 같아요)
+ var wp=S.pos;
+ if(!wp){var ps=places.filter(function(p){return p.lat!=null});if(ps.length){var s=ps.slice(0,30);wp={lat:s.reduce(function(a,p){return a+p.lat},0)/s.length,lng:s.reduce(function(a,p){return a+p.lng},0)/s.length}}}
+ if(wp)S.weather=await fetchWeather(wp.lat,wp.lng);
+ S.wxDone=true;
+ if(S.screen==='pick')render()
 }
 function pickChoice(kind,i){
  var arr=kind==='taste'?S.pickTaste:kind==='hunger'?S.pickHunger:S.pickFeel;
@@ -719,7 +732,7 @@ function pickChips(list,act,sel){
 }
 function vPick(){
  var w=S.weather,wd=w?wxDesc(w.code):'';
- var wline=w?('<div class="sub" style="font-size:12px">'+dayLabel_()+' · '+(w.temp!=null?Math.round(w.temp)+'℃ · ':'')+wd+'</div>'):'<div class="sub" style="font-size:12px">'+dayLabel_()+' · 날씨를 확인하는 중…</div>';
+ var wline=w?('<div class="sub" style="font-size:12px">'+dayLabel_()+' · '+(w.temp!=null?Math.round(w.temp)+'℃ · ':'')+wd+'</div>'):'<div class="sub" style="font-size:12px">'+dayLabel_()+(S.wxDone?'':' · 날씨를 확인하는 중…')+'</div>';
  var step=S.pickStep||0;
  if(step===0){
   return '<div class="scr"><div class="edge"></div>'+back()+
@@ -1516,7 +1529,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261021b';
+var BUILD='20261021c';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
