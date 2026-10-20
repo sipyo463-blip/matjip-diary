@@ -35,6 +35,19 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .field input{flex:1;min-width:0;border:0;outline:0;background:none;font-size:16px}
 .field input::placeholder,textarea::placeholder{color:var(--ph)}
 .field svg{flex:none;color:var(--sub)}
+.dlgbk{position:fixed;inset:0;z-index:2000;background:rgba(62,53,43,.42);display:flex;align-items:center;justify-content:center;padding:0 28px;opacity:0;transition:opacity .18s}
+.dlgbk.on{opacity:1}
+.dlg{width:100%;max-width:340px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:26px 22px 18px;box-shadow:0 18px 44px rgba(62,53,43,.32);transform:translateY(10px) scale(.96);transition:transform .2s cubic-bezier(.2,.9,.3,1.2)}
+.dlgbk.on .dlg{transform:none}
+.dlg .dt{font-size:17px;font-weight:800;line-height:1.4;text-align:center;letter-spacing:-.02em}
+.dlg .ds{font-size:13px;color:var(--sub);text-align:center;margin-top:6px;line-height:1.5}
+.dlg .db{display:flex;gap:10px;margin-top:22px}
+.dlg .db button{flex:1;height:48px;border-radius:14px;font-size:15px;font-weight:700}
+.dlg .db .no{background:var(--chip);color:var(--ink)}
+.dlg .db .yes{background:var(--ink);color:var(--paper)}
+.dlg .db .yes.danger{background:var(--stamp);color:#fff}
+.dlg .db button:active{transform:scale(.97)}
+
 .btn{height:54px;border-radius:14px;background:var(--ink);color:var(--paper);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
 .btn.line{background:none;color:var(--ink);border:1px solid var(--ink);height:48px;font-size:14px}
 .btn[disabled]{opacity:.55}
@@ -306,6 +319,19 @@ function rescueSpace(){
   // 그래도 부족하면 인터넷에서 다시 찾을 수 있는 검색 사진은 비워 두고 링크로 다시 받아요
   places.forEach(function(p){if(p&&p.photo&&p.photo.indexOf('data:')===0&&(p.thumb==='img'||p.thumb==='shared')){p.photo=null;p.thumb=null;p.thumbTry=null}});
   try{localStorage.setItem(KEY,JSON.stringify(places));toast('검색 사진은 링크로 다시 불러올게요');fillMissingThumbs()}catch(e){toast('저장 공간이 가득 찼어요. 내가 올린 사진 일부를 지워주세요')}
+ });
+}
+function askConfirm(title,opt){
+ opt=opt||{};
+ return new Promise(function(res){
+  var bk=document.createElement('div');bk.className='dlgbk';
+  bk.innerHTML='<div class="dlg" role="dialog" aria-modal="true"><div class="dt">'+esc(title)+'</div>'+(opt.sub?'<div class="ds">'+esc(opt.sub)+'</div>':'')+'<div class="db"><button class="no" type="button">'+esc(opt.no||'취소')+'</button><button class="yes'+(opt.danger?' danger':'')+'" type="button">'+esc(opt.yes||'확인')+'</button></div></div>';
+  var done=function(v){bk.classList.remove('on');setTimeout(function(){bk.remove()},180);res(v)};
+  bk.addEventListener('click',function(e){if(e.target===bk)done(false)});
+  bk.querySelector('.no').addEventListener('click',function(){done(false)});
+  bk.querySelector('.yes').addEventListener('click',function(){done(true)});
+  document.body.appendChild(bk);
+  requestAnimationFrame(function(){bk.classList.add('on')});
  });
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -1298,7 +1324,7 @@ function dongOf(addr){var m=String(addr||'').match(/([가-힣0-9]+(?:동|읍|면
 var PH_VARIANTS=['맛집','','음식','메뉴','외관','내부','간판'];
 async function rePhoto(){
  var p=byId(S.openId);if(!p||thumbBusy['re'+p.id])return;
- if(p.photo&&!p.thumb&&!confirm('내가 올린 사진을 다른 사진으로 바꿀까요?'))return;
+ if(p.photo&&!p.thumb&&!(await askConfirm('내가 올린 사진을 다른 사진으로 바꿀까요?',{yes:'바꾸기'})))return;
  thumbBusy['re'+p.id]=1;
  var w=document.querySelector('.phwrap');if(w)w.classList.add('busy');
  toast('다른 사진을 찾는 중…');
@@ -1432,13 +1458,13 @@ document.addEventListener('click',function(e){
   case 'stamp':
    var sp=byId(S.openId);if(!sp)break;
    var sts=stampsOf(sp),si=+t.getAttribute('data-i');
-   if(si<sts.length){if(confirm('이 도장을 지울까요?')){sts.splice(si,1);sp.stamps=sts;sp.visited=sts.length>0;persist();render()}}
+   if(si<sts.length){askConfirm('이 도장을 지울까요?',{yes:'지우기',danger:true}).then(function(ok){if(!ok)return;sts.splice(si,1);sp.stamps=sts;sp.visited=sts.length>0;persist();render()})}
    else if(sts.length>=8){toast('도장판이 가득 찼어요 🎉')}
    else if(sts.length&&new Date(Math.max.apply(null,sts)).toDateString()===new Date().toDateString()){toast('도장은 하루에 한 번만 찍을 수 있어요')}
    else{sts.push(Date.now());sp.stamps=sts;sp.visited=true;persist();S.newStamp=sts.length-1;try{navigator.vibrate&&navigator.vibrate([20,40,30])}catch(e){}render();S.newStamp=null}
    break;
   case 'visit':var v=byId(S.openId);v.visited=!v.visited;persist();render();break;
-  case 'del':if(confirm('이 맛집을 삭제할까요?')){places=places.filter(function(x){return x.id!==S.openId});persist();toast('삭제했어요');history.back()}break;
+  case 'del':askConfirm('이 맛집을 삭제할까요?',{sub:'삭제하면 되돌릴 수 없어요',yes:'삭제',danger:true}).then(function(ok){if(!ok)return;places=places.filter(function(x){return x.id!==S.openId});persist();toast('삭제했어요');history.back()});break;
  }
 });
 document.addEventListener('click',function(e){if(e.target.id==='lpMenu')closeLpMenu()});
@@ -1529,7 +1555,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261021d';
+var BUILD='20261021e';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
