@@ -136,6 +136,8 @@ function pick_(p) {
   if (r.getResponseCode() !== 200) return { error: 'api ' + r.getResponseCode() };
   var cs = JSON.parse(r.getContentText()).content || [];
   var raw = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
+  var rawOrig = raw;
+  raw = raw.replace(/[*`]/g, '');
   var items = [];
   var seen = {};
   for (var i = 1; i <= n; i++) {
@@ -151,7 +153,7 @@ function pick_(p) {
   if (!items.length) {
     for (var j = 0; j < n; j++) items.push({ id: pool[j].id, reason: '' });
   }
-  return { items: items };
+  return { items: items, raw: rawOrig.slice(0, 400) };
 }
 
 // 운명의 랜덤픽: 별자리/MBTI/혈액형/바이오리듬/시간/날씨를 바탕으로 Haiku가 저장된 맛집 중 한 곳을 골라줌
