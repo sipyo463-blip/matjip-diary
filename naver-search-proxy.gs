@@ -114,7 +114,7 @@ function pick_(p) {
     return c.id + ' | ' + c.name + ' | ' + (c.cat || '') + ' | ' + (c.dist != null ? Math.round(c.dist) + 'm' : '');
   }).join('\n');
   var fmtEx = [];
-  for (var i = 1; i <= n; i++) fmtEx.push('RANK' + i + '_ID: <고른 id>\nRANK' + i + '_REASON: <왜 어울리는지, 100자 이내, 존댓말>');
+  for (var i = 1; i <= n; i++) fmtEx.push('RANK' + i + '_ID: <고른 id>\nRANK' + i + '_REASON: <왜 어울리는지, 60자 이내 재치있게, 존댓말>');
   var q = '아래는 사용자 근처에 저장된 맛집 후보 목록입니다 (형식: id | 가게이름 | 종류 | 거리).\n' + lines +
     '\n\n사용자 취향(복수 선택 가능, 쉼표로 구분):\n- 오늘 먹고 싶은 맛: ' + (p.taste || '상관없음') +
     '\n- 배고픈 정도: ' + (p.hunger || '상관없음') +
@@ -128,30 +128,37 @@ function pick_(p) {
     model: 'claude-haiku-5-5', max_tokens: 1200,
     messages: [{ role: 'user', content: [{ type: 'text', text: q }] }]
   };
-  var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
-    method: 'post', contentType: 'application/json',
-    headers: { 'x-api-key': k, 'anthropic-version': '2023-06-01' },
-    payload: JSON.stringify(body), muteHttpExceptions: true
-  });
-  if (r.getResponseCode() !== 200) return { error: 'api ' + r.getResponseCode() };
-  var cs = JSON.parse(r.getContentText()).content || [];
-  var raw = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
-  var rawOrig = raw;
-  raw = raw.replace(/[*`]/g, '');
-  var items = [];
-  var seen = {};
-  for (var i = 1; i <= n; i++) {
-    var idm = raw.match(new RegExp('RANK' + i + '_ID:\\s*([^\\n\\r]+)', 'i'));
-    var rem = raw.match(new RegExp('RANK' + i + '_REASON:\\s*([^\\n\\r]+)', 'i'));
-    if (!idm) continue;
-    var id = idm[1].replace(/[*"'`]/g, '').trim();
-    if (!pool.some(function (c) { return String(c.id) === id; })) continue;
-    if (seen[id]) continue;
-    seen[id] = true;
-    items.push({ id: id, reason: rem ? rem[1].trim().slice(0, 60) : '' });
+  var items = [], rawOrig = '';
+  for (var attempt = 0; attempt < 2; attempt++) {
+    var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+      method: 'post', contentType: 'application/json',
+      headers: { 'x-api-key': k, 'anthropic-version': '2023-06-01' },
+      payload: JSON.stringify(body), muteHttpExceptions: true
+    });
+    if (r.getResponseCode() !== 200) { if (attempt === 1 && !items.length) return { error: 'api ' + r.getResponseCode() }; continue; }
+    var cs = JSON.parse(r.getContentText()).content || [];
+    var rawA = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
+    var raw = rawA.replace(/[*`]/g, '');
+    var got = [], seen = {};
+    for (var i = 1; i <= n; i++) {
+      var idm = raw.match(new RegExp('RANK' + i + '_ID:\\s*([^\\n\\r]+)', 'i'));
+      var rem = raw.match(new RegExp('RANK' + i + '_REASON:\\s*([^\\n\\r]+)', 'i'));
+      if (!idm) continue;
+      var tok = idm[1].replace(/[*"'`]/g, '').trim();
+      var hit = pool.filter(function (c) { return String(c.id) === tok; })[0] ||
+        pool.filter(function (c) { return tok.indexOf(String(c.id)) !== -1; })[0];
+      if (!hit || seen[hit.id]) continue;
+      seen[hit.id] = true;
+      got.push({ id: String(hit.id), reason: rem ? rem[1].trim().slice(0, 80) : '' });
+    }
+    var score = function (a) { return a.length * 10 + a.filter(function (x) { return x.reason; }).length; };
+    if (score(got) > score(items)) { items = got; rawOrig = rawA; }
+    if (items.length === n && items.every(function (x) { return x.reason; })) break;
   }
-  if (!items.length) {
-    for (var j = 0; j < n; j++) items.push({ id: pool[j].id, reason: '' });
+  var used = {};
+  items.forEach(function (x) { used[x.id] = 1; });
+  for (var j = 0; j < pool.length && items.length < n; j++) {
+    if (!used[String(pool[j].id)]) items.push({ id: String(pool[j].id), reason: '' });
   }
   return { items: items, raw: rawOrig.slice(0, 400) };
 }
