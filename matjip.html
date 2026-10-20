@@ -590,8 +590,9 @@ async function runPick(exclude){
  }};
  var ranked=[];
  try{
-  var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-  var j=await r.json();
+  var ac=new AbortController(),to=setTimeout(function(){ac.abort()},4200);
+  var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac.signal});
+  var j=await r.json();clearTimeout(to);
   if(j&&j.items&&j.items.length){
    ranked=j.items.map(function(it){var c=cands.find(function(x){return String(x.id)===String(it.id)});return c?{place:c,reason:it.reason||''}:null}).filter(Boolean);
   }
@@ -601,12 +602,12 @@ async function runPick(exclude){
  }catch(e){}
  if(!ranked.length)ranked=cands.slice(0,3).map(function(c){return {place:c,reason:''}});
  ranked.forEach(function(x){if(!x.reason){var d=x.place._d;x.reason='여기서 '+(d!=null?fmt(d)+' 거리, ':'')+'지금 가기 딱 좋은 후보예요.'}});
- var left=3300-(Date.now()-t0);if(left>0)await new Promise(function(r){setTimeout(r,left)});
+ var left=2200-(Date.now()-t0);if(left>0)await new Promise(function(r){setTimeout(r,left)});
  if(S.waitTok!==wTok)return;
  S.pickRanked=ranked;S.pickLoading=false;S.pickReveal=true;
  if(S.screen==='pick')render();
  S.pickReveal=false;
- ranked.forEach(function(x,i){setTimeout(function(){try{if(S.screen==='pick'&&navigator.vibrate)navigator.vibrate(i===0?30:18)}catch(e){}},500+i*1000)});
+ ranked.forEach(function(x,i){setTimeout(function(){try{if(S.screen==='pick'&&navigator.vibrate)navigator.vibrate(i===0?30:18)}catch(e){}},300+i*600)});
 }
 function pickReroll(){
  if(S.pickLoading)return;
@@ -691,7 +692,7 @@ function vPick(){
  var cards=S.pickRanked.map(function(r,i){
   var p=r.place;
   var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
-  return '<button class="row'+(S.pickReveal?' rev':'')+'" data-act="pickOpen" data-i="'+i+'" style="align-items:flex-start;flex-wrap:wrap'+(S.pickReveal?';animation-delay:'+(0.45+i*1.0)+'s':'')+'">'+
+  return '<button class="row'+(S.pickReveal?' rev':'')+'" data-act="pickOpen" data-i="'+i+'" style="align-items:flex-start;flex-wrap:wrap'+(S.pickReveal?';animation-delay:'+(0.3+i*0.6)+'s':'')+'">'+
    '<div class="pn sm" style="flex:none;margin-top:2px">'+(i+1)+'</div>'+th+
    '<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+(p._d!=null?' · '+fmt(p._d):'')+'</div>'+
    (r.desc?'<div class="sub" style="margin-top:4px;white-space:normal">'+esc(r.desc)+'</div>':'')+
@@ -1450,7 +1451,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  document.addEventListener('scroll',function(e){if(!drag&&e.target&&e.target.id==='plist')sync()},true);
  setInterval(sync,300);
 })();
-var BUILD='20261020n';
+var BUILD='20261020o';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){

@@ -109,51 +109,39 @@ function pick_(p) {
   var excl = p.exclude || [];
   var pool = cands.filter(function (c) { return excl.indexOf(c.id) === -1; });
   if (!pool.length) pool = cands;
+  pool = pool.slice().sort(function (x, y) { return (x.dist || 0) - (y.dist || 0); }).slice(0, 12);
   var n = Math.min(3, pool.length);
   var lines = pool.map(function (c) {
-    return c.id + ' | ' + c.name + ' | ' + (c.cat || '') + ' | ' + (c.dist != null ? Math.round(c.dist) + 'm' : '');
+    return c.id + '|' + c.name + '|' + (c.cat || '') + '|' + (c.dist != null ? Math.round(c.dist) + 'm' : '');
   }).join('\n');
-  var fmtEx = [];
-  for (var i = 1; i <= n; i++) fmtEx.push('RANK' + i + '_ID: <고른 id>\nRANK' + i + '_REASON: <왜 어울리는지, 60자 이내 재치있게, 존댓말>');
-  var q = '아래는 사용자 근처에 저장된 맛집 후보 목록입니다 (형식: id | 가게이름 | 종류 | 거리).\n' + lines +
-    '\n\n사용자 취향(복수 선택 가능, 쉼표로 구분):\n- 오늘 먹고 싶은 맛: ' + (p.taste || '상관없음') +
-    '\n- 배고픈 정도: ' + (p.hunger || '상관없음') +
-    '\n- 오늘 기분: ' + (p.feel || '상관없음') +
-    (p.weather ? '\n- 현재 날씨: ' + p.weather : '') +
-    (p.time ? '\n- 현재 시간대: ' + p.time : '') +
-    (p.time ? '\n\n시간대를 반드시 고려하세요. 예를 들어 아침/브런치 시간대에는 술집·포차·호프 등 음주 중심 장소를 추천하지 말고, 밤/야식 시간대에는 아침식사 전문점을 추천하지 마세요. 시간대에 안 맞는 후보보다 조금 덜 맞아도 시간대에 맞는 곳을 우선하세요.' : '') +
-    '\n\n위 취향에 가장 잘 맞는 곳을 후보 중 ' + n + '곳을 골라 순위를 매기고, 정확히 아래 형식으로만 답하세요. 다른 말이나 설명은 절대 쓰지 마세요. 각 REASON은 반드시 60자 이내의 한 문장으로 짧게 쓰세요. 단, 딱딱한 추천 이유가 아니라 센스 있는 친구가 던지는 기발하고 유머러스한 한마디로 쓰세요 (예: 상황극, 과장법, 말장난, 의인화, 가상의 속마음 중 하나). 세 곳의 말투와 비유는 서로 다르게 하고, 사용자의 맛·배고픔·기분·날씨·시간대를 슬쩍 녹이세요. 이모지는 한 문장에 최대 1개만 쓰세요. 가게에 대해 모르는 사실(메뉴·맛·분위기 등)을 지어내지 말고, 이름·종류·거리·날씨·시간대에서 소재를 찾으세요:\n' +
-    fmtEx.join('\n');
+  var ctx = [p.taste, p.hunger, p.feel, p.weather, p.time].filter(function (x) { return x && x !== '상관없음'; }).join(', ');
+  var q = '후보(id|이름|종류|거리):\n' + lines + '\n상황: ' + (ctx || '특별한 조건 없음') +
+    '\n시간대에 안 맞는 곳(아침에 술집 등)은 피해 ' + n + '곳을 골라 순위대로 한 줄씩 답해: 순위|id|한마디\n' +
+    '한마디=센스 있는 친구의 기발한 농담, 30자 이내, 존댓말, 이모지 최대1, 서로 다른 비유(상황극/과장/말장난/의인화), 이름·종류·거리·날씨·시간에서만 소재를 찾고 모르는 맛·메뉴는 지어내지 마. 다른 말 금지.';
   var body = {
-    model: 'claude-haiku-5-5', max_tokens: 1200,
+    model: 'claude-haiku-5-5', max_tokens: 260,
     messages: [{ role: 'user', content: [{ type: 'text', text: q }] }]
   };
   var items = [], rawOrig = '';
-  for (var attempt = 0; attempt < 2; attempt++) {
-    var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
-      method: 'post', contentType: 'application/json',
-      headers: { 'x-api-key': k, 'anthropic-version': '2023-06-01' },
-      payload: JSON.stringify(body), muteHttpExceptions: true
-    });
-    if (r.getResponseCode() !== 200) { if (attempt === 1 && !items.length) return { error: 'api ' + r.getResponseCode() }; continue; }
+  var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+    method: 'post', contentType: 'application/json',
+    headers: { 'x-api-key': k, 'anthropic-version': '2023-06-01' },
+    payload: JSON.stringify(body), muteHttpExceptions: true
+  });
+  if (r.getResponseCode() === 200) {
     var cs = JSON.parse(r.getContentText()).content || [];
-    var rawA = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
-    var raw = rawA.replace(/[*`]/g, '');
-    var got = [], seen = {};
-    for (var i = 1; i <= n; i++) {
-      var idm = raw.match(new RegExp('RANK' + i + '_ID:\\s*([^\\n\\r]+)', 'i'));
-      var rem = raw.match(new RegExp('RANK' + i + '_REASON:\\s*([^\\n\\r]+)', 'i'));
-      if (!idm) continue;
-      var tok = idm[1].replace(/[*"'`]/g, '').trim();
+    rawOrig = cs.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
+    var seen = {};
+    rawOrig.replace(/[*`]/g, '').split(/\r?\n/).forEach(function (ln) {
+      var m = ln.match(/^\s*\d+\s*[|.)]\s*([^|]+?)\s*\|\s*(.+)$/);
+      if (!m || items.length >= n) return;
+      var tok = m[1].trim();
       var hit = pool.filter(function (c) { return String(c.id) === tok; })[0] ||
         pool.filter(function (c) { return tok.indexOf(String(c.id)) !== -1; })[0];
-      if (!hit || seen[hit.id]) continue;
+      if (!hit || seen[hit.id]) return;
       seen[hit.id] = true;
-      got.push({ id: String(hit.id), reason: rem ? rem[1].trim().slice(0, 80) : '' });
-    }
-    var score = function (a) { return a.length * 10 + a.filter(function (x) { return x.reason; }).length; };
-    if (score(got) > score(items)) { items = got; rawOrig = rawA; }
-    if (items.length === n && items.every(function (x) { return x.reason; })) break;
+      items.push({ id: String(hit.id), reason: m[2].trim().slice(0, 60) });
+    });
   }
   var used = {};
   items.forEach(function (x) { used[x.id] = 1; });
