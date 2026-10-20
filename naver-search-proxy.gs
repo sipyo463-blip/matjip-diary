@@ -115,11 +115,16 @@ function pick_(p) {
     return c.id + '|' + c.name + '|' + (c.cat || '') + '|' + (c.dist != null ? Math.round(c.dist) + 'm' : '');
   }).join('\n');
   var ctx = [p.taste, p.hunger, p.feel, p.weather, p.time].filter(function (x) { return x && x !== '상관없음'; }).join(', ');
-  var q = '후보(id|이름|종류|거리):\n' + lines + '\n상황: ' + (ctx || '특별한 조건 없음') +
-    '\n시간대에 안 맞는 곳(아침에 술집 등)은 피해 ' + n + '곳을 골라 순위대로 한 줄씩 답해: 순위|id|한마디\n' +
-    '한마디=센스 있는 친구의 기발한 농담, 30자 이내, 존댓말, 이모지 최대1, 서로 다른 비유(상황극/과장/말장난/의인화), 이름·종류·거리·날씨·시간에서만 소재를 찾고 모르는 맛·메뉴는 지어내지 마. 다른 말 금지.';
+  var q = '후보(id|이름|종류|거리):\n' + lines + '\n오늘 상황: ' + (ctx || '특별한 조건 없음') +
+    '\n\n위 상황에 가장 어울리는 ' + n + '곳을 순위대로 골라, 한 줄씩 정확히 이 형식으로만 답해: 순위|id|추천사유\n' +
+    '규칙:\n' +
+    '1) 추천사유는 40~80자, 한두 문장. 반드시 [오늘 상황(맛·배고픔·기분·날씨·시간대 중 최소 1개) → 이 가게의 종류/거리]가 논리적으로 이어져야 해. 왜 지금 이 가게인지 납득되게.\n' +
+    '2) 그 논리 위에 위트를 한 스푼: 상황극, 과장, 비유, 의인화 중 하나. 억지 말장난이나 앞뒤 안 맞는 농담은 금지. 가게 이름으로 말장난하지 마.\n' +
+    '3) 1·2·3위는 서로 다른 이유와 말투로. 2·3위는 1위와 비교해 어떤 점이 다른지(더 가깝다, 더 든든하다 등) 암시하면 좋아.\n' +
+    '4) 이름·종류·거리·날씨·시간대에서만 근거를 찾고, 모르는 메뉴·맛·분위기·후기는 지어내지 마. 거리는 사실대로. 이모지 최대 1개, 존댓말.\n' +
+    '5) 시간대에 안 맞는 곳(아침에 술집 등)은 제외. 다른 말 금지.';
   var body = {
-    model: 'claude-haiku-5-5', max_tokens: 300, thinking: { type: 'disabled' },
+    model: 'claude-haiku-5-5', max_tokens: 450, thinking: { type: 'disabled' },
     messages: [{ role: 'user', content: [{ type: 'text', text: q }] }]
   };
   var items = [], rawOrig = '';
@@ -141,7 +146,7 @@ function pick_(p) {
         pool.filter(function (c) { return tok.indexOf(String(c.id)) !== -1; })[0];
       if (!hit || seen[hit.id]) return;
       seen[hit.id] = true;
-      items.push({ id: String(hit.id), reason: m[2].trim().slice(0, 60) });
+      items.push({ id: String(hit.id), reason: m[2].trim().slice(0, 100) });
     });
   }
   var used = {};
