@@ -560,6 +560,13 @@ function pickChoice(kind,i){
 }
 function pickNext(){runPick()}
 function pickPrev(){back()}
+function dayLabel_(){var d=new Date();return (d.getMonth()+1)+'월 '+d.getDate()+'일 '+'일월화수목금토'[d.getDay()]+'요일'}
+function dayCtx_(){var d=new Date().getDay(),n='일월화수목금토'[d]+'요일';
+ if(d===5)return n+'(불금, 주말 전날)';
+ if(d===6)return n+'(주말, 쉬는 날)';
+ if(d===0)return n+'(주말, 한 주의 마지막 날)';
+ if(d===1)return n+'(평일, 한 주의 시작)';
+ return n+'(평일)'}
 function timeOfDay_(){
  var h=new Date().getHours();
  if(h>=5&&h<9)return '새벽~아침(이른 아침, 해장/아침식사 시간대)';
@@ -635,7 +642,7 @@ async function runPick(exclude){
   cands:cands.map(function(c){return {id:c.id,name:c.name,cat:cat(c.name),dist:c._d}}),
   taste:pick(TASTES,S.pickTaste),hunger:pick(HUNGERS,S.pickHunger),feel:pick(FEELS,S.pickFeel),
   weather:S.weather?((S.weather.temp!=null?Math.round(S.weather.temp)+'℃ ':'')+wxDesc(S.weather.code)):'',
-  time:timeOfDay_(),
+  time:timeOfDay_(),day:dayCtx_(),
   exclude:exclude||[]
  }};
  var ranked=[];
@@ -712,7 +719,7 @@ function pickChips(list,act,sel){
 }
 function vPick(){
  var w=S.weather,wd=w?wxDesc(w.code):'';
- var wline=w?('<div class="sub" style="font-size:12px">'+(w.temp!=null?Math.round(w.temp)+'℃ · ':'')+wd+'</div>'):'<div class="sub" style="font-size:12px">날씨를 확인하는 중…</div>';
+ var wline=w?('<div class="sub" style="font-size:12px">'+dayLabel_()+' · '+(w.temp!=null?Math.round(w.temp)+'℃ · ':'')+wd+'</div>'):'<div class="sub" style="font-size:12px">'+dayLabel_()+' · 날씨를 확인하는 중…</div>';
  var step=S.pickStep||0;
  if(step===0){
   return '<div class="scr"><div class="edge"></div>'+back()+
@@ -1509,7 +1516,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261021a';
+var BUILD='20261021b';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
