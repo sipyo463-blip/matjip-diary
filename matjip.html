@@ -874,6 +874,7 @@ function vConfirm(){
  var alt=S.cands.length?'<button class="link" data-act="saveHere">목록에 없어요 · 이름만 저장</button>':'';
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">CHECK / PLACE</div><div class="h1">여기 맞아요?</div></div><div class="sub">"'+esc(S.query)+'"</div></div>'+
+ (S.editMode?'':'<button class="link" style="align-self:flex-start;margin-top:-4px" data-act="manual">원하는 곳이 없나요? 직접 입력</button>')+
  rows+none+
  (hasMap?'<div class="mapbox"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.gpsFrom==='device'?'찍은 위치':S.photoGps&&S.gpsFrom==='pin'?'고른 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
  '<div class="two" style="flex:none">'+(S.editMode?'':'<div class="field" style="flex:1;font-size:14px"><input id="qMemo" value="'+esc(S.memo)+'" placeholder="메모 (선택)"></div>')+mainBtn+'</div>'+
@@ -963,7 +964,27 @@ function vPin(){
  '<div class="sub" id="pinAddr" style="flex:none;min-height:36px">지도를 움직여 가게 위치에 동그라미를 맞춰 주세요</div>'+
  '<button class="btn" data-act="pinOk">이 위치로 정하기</button></div>';
 }
-var VIEWS={home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin,review:vReview,pick:vPick,share:vShare};
+function vManual(){
+ return '<div class="scr"><div class="edge"></div>'+back()+
+ '<div><div class="eyebrow">MANUAL / PLACE</div><div class="h1">직접 입력</div></div>'+
+ '<div class="field"><input id="mName" value="'+esc(S.mName||'')+'" placeholder="가게 이름 (예: 연탄 생고기집 성수점)" autocomplete="off"></div>'+
+ '<div class="field"><input id="mAddr" value="'+esc(S.mAddr||'')+'" placeholder="주소나 동네 (선택, 예: 성수동)" autocomplete="off" enterkeyhint="done"></div>'+
+ '<button class="btn" data-act="manualGo" id="mBtn">저장하기</button>'+
+ '<div class="grow"></div></div>';
+}
+async function manualGo(){
+ var name=(S.mName||'').trim(),addr=(S.mAddr||'').trim();
+ if(!name){toast('가게 이름을 적어 주세요');var i=$('#mName');if(i)i.focus();return}
+ var b=$('#mBtn');if(b){b.disabled=true;b.innerHTML='<span class="spin"></span>위치 확인 중'}
+ var near=S.photoGps||S.pos,c=[];
+ if(addr){try{c=await searchPlaces(addr+' '+name,near)}catch(e){c=[]}}
+ if(c.length&&c[0].d!=null&&c[0].d<2000||c.length&&!near){S.cands=c;S.query=name;S.sel=0;S.mName=S.mAddr='';go('confirm');return}
+ var fp=S.fillId?byId(S.fillId):null;
+ var rv={name:name,addr:addr,lat:null,lng:null,memo:S.memo||'',src:S.src,photo:S.photo||null,thumb:null,fillId:fp?fp.id:null,mine:!!S.photo,noLoc:true,naver:null};
+ if(!rv.photo){toast('음식점 사진을 찾는 중…');var th=await foodThumb(name,addr);if(th){rv.photo=th.img;rv.thumb=th.from}}
+ S.mName=S.mAddr='';S.rv=rv;go('review');
+}
+var VIEWS={manual:vManual,home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin,review:vReview,pick:vPick,share:vShare};
 
 /* ---------- maps (네이버 지도 → 없으면 OpenStreetMap) ---------- */
 function mkMap(id,center,zoom){
@@ -1435,6 +1456,8 @@ document.addEventListener('click',function(e){
   case 'pick':S.sel=+t.getAttribute('data-i');syncConfirm();break;
   case 'confirmSave':confirmSave();break;
   case 'saveHere':saveHere();break;
+  case 'manual':S.mName=S.query||'';S.mAddr='';go('manual');break;
+  case 'manualGo':manualGo();break;
   case 'rvSave':rvSave();break;
   case 'rvPhoto':rvPhoto();break;
   case 'rvNoPhoto':if(S.rv){S.rv.photo=null;S.rv.thumb=null;render()}break;
@@ -1472,6 +1495,8 @@ document.addEventListener('input',function(e){
  var i=e.target.id;
  if(i==='qName')S.query=e.target.value;
  else if(i==='qMemo')S.memo=e.target.value;
+ else if(i==='mName')S.mName=e.target.value;
+ else if(i==='mAddr')S.mAddr=e.target.value;
  else if(i==='rName'&&S.rv)S.rv.name=e.target.value;
  else if(i==='rAddr'&&S.rv)S.rv.addr=e.target.value;
  else if(i==='rMemo'&&S.rv)S.rv.memo=e.target.value;
@@ -1555,7 +1580,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261030a';
+var BUILD='20261030b';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
