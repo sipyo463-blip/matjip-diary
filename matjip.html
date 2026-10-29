@@ -56,6 +56,8 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .link{text-align:center;font-size:13px;color:var(--sub);padding:4px;text-decoration:underline;text-underline-offset:3px}
 .ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .grow{flex:1;min-height:0}
+.cl{flex:3 1 0;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
+.mnl{flex:none;display:flex;flex-direction:column;gap:8px;padding-bottom:4px}
 
 /* home */
 .memo{flex:none;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;text-align:left;width:100%;min-height:72px}
@@ -423,7 +425,7 @@ function ini(n){return esc((String(n).trim()[0]||'맛'))}
 function copy(t){try{navigator.clipboard.writeText(t).then(function(){toast('복사했어요')},fb)}catch(e){fb()}function fb(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('복사했어요')}catch(e){toast('복사하지 못했어요')}a.remove()}}
 
 /* ---------- location / geocoding ---------- */
-var S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetMode:'mid',mapFull:false,destinyTok:0,waitTok:0,shareBusy:false};
+var S=window.S={installEv:null,screen:'home',pos:null,posLabel:'',query:'',memo:'',photo:null,photoGps:null,photoAddr:'',photoLabel:'',src:'name',cands:[],sel:0,busy:false,q:'',chip:'near',hl:null,focusId:null,openId:null,fillId:null,editMode:false,draft:null,pinFor:'photo',pinC:null,pinAddr:'',nearO:null,gpsFrom:null,map:null,mk:[],stack:[],sheetMode:'mid',mapFull:false,destinyTok:0,waitTok:0,shareBusy:false};
 
 function locate(){
  var ok=function(p,res){S.pos={lat:p.coords.latitude,lng:p.coords.longitude};try{localStorage.setItem('matjip_lastpos',JSON.stringify(S.pos))}catch(e){}
@@ -812,7 +814,7 @@ function vPick(){
 
 /* ---------- navigation ---------- */
 function killMap(){if(S.map){try{mKill(S.map)}catch(e){}S.map=null;S.mk=[]}}
-function go(sc,opt){
+window.go=go;function go(sc,opt){
  opt=opt||{};killMap();
  if(opt.reset){S.stack=[]}else{S.stack.push(S.screen);try{history.pushState({},'')}catch(e){}}
  S.screen=sc;render();
@@ -868,18 +870,14 @@ function vFill(){
 function vConfirm(){
  var rows=S.cands.map(function(c,i){return '<button class="row'+(i===S.sel?' sel':'')+'" data-act="pick" data-i="'+i+'"><div class="th">'+ini(c.name)+'</div><div class="mid"><div class="nm">'+esc(c.name)+'</div><div class="meta">'+esc(cat(c.name))+' · '+esc(c.addr)+'</div></div><div class="rt'+(i?' g':'')+'">'+fmt(c.d)+'</div></button>'}).join('');
  var ref=S.photoGps||S.pos,hasMap=ref||S.cands.length;
- var none=!S.cands.length?'<div class="empty">찾지 못했어요.<br>동네를 같이 적으면 더 잘 찾아요.</div>':'';
- var mainBtn=S.cands.length?
-  '<button class="btn" style="'+(S.editMode?'':'width:110px;flex:none')+'" data-act="confirmSave">'+(S.editMode?'이 위치로 바꾸기':'확인')+'</button>':
-  '<button class="btn" style="'+(S.editMode?'':'width:110px;flex:none')+'" data-act="saveHere">이름만 저장</button>';
- var alt=S.cands.length?'<button class="link" data-act="saveHere">목록에 없어요 · 이름만 저장</button>':'';
+ var none=!S.cands.length?'<div class="empty">찾지 못했어요.<br>아래에 직접 입력해 주세요.</div>':'';
+ var okBtn=S.cands.length?'<button class="btn" style="width:84px;flex:none;padding:10px 0" data-act="confirmSave">'+(S.editMode?'바꾸기':'확인')+'</button>':'';
+ var manual=S.editMode?'':'<div class="mnl"><div class="meta" style="font-size:13px;font-weight:700">원하는 곳이 없어요? 직접 입력</div><div class="two" style="flex:none"><div class="field" style="flex:1;font-size:14px"><input id="mName" value="'+esc(S.mName||'')+'" placeholder="가게 이름 (예: 성수동 연탄 생고기집)" autocomplete="off" enterkeyhint="done"></div><button class="btn" style="width:84px;flex:none" data-act="manualGo" id="mBtn">저장</button></div></div>';
  return '<div class="scr"><div class="edge"></div>'+back()+
- '<div class="top"><div><div class="eyebrow">CHECK / PLACE</div><div class="h1">여기 맞아요?</div></div><div class="sub">"'+esc(S.query)+'"</div></div>'+
- (S.editMode?'':'<button class="link" style="align-self:flex-start;margin-top:-4px" data-act="manual">원하는 곳이 없나요? 직접 입력</button>')+
- rows+none+
- (hasMap?'<div class="mapbox"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.gpsFrom==='device'?'찍은 위치':S.photoGps&&S.gpsFrom==='pin'?'고른 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
- '<div class="two" style="flex:none">'+(S.editMode?'':'<div class="field" style="flex:1;font-size:14px"><input id="qMemo" value="'+esc(S.memo)+'" placeholder="메모 (선택)"></div>')+mainBtn+'</div>'+
- alt+'</div>';
+ '<div class="top"><div><div class="eyebrow">CHECK / PLACE</div><div class="h1">여기 맞아요?</div><div class="sub" style="margin-top:2px">"'+esc(S.query)+'"</div></div>'+okBtn+'</div>'+
+ '<div class="cl">'+rows+none+'</div>'+
+ (hasMap?'<div class="mapbox" style="flex:2 1 0;min-height:0"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.gpsFrom==='device'?'찍은 위치':S.photoGps&&S.gpsFrom==='pin'?'고른 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
+ manual+'</div>';
 }
 function vFind(){
  return '<div class="fwrap'+(S.mapFull?' mapfull':'')+'" data-sheet="'+S.sheetMode+'"><div id="fmap"></div>'+
@@ -1528,6 +1526,7 @@ document.addEventListener('keydown',function(e){
  if(e.key!=='Enter')return;var i=e.target.id;
  if(i==='qFind'){e.preventDefault();e.target.blur()}
  else if(i==='qName'){e.preventDefault();e.target.blur();doFind()}
+ else if(i==='mName'){e.preventDefault();e.target.blur();manualGo()}
  else if(i==='qPin'){e.preventDefault();e.target.blur();pinSearch()}
  else if(i==='eQ'){e.preventDefault();e.target.blur();var b=document.querySelector('[data-act=eFind]');if(b)b.click()}
 });
@@ -1595,7 +1594,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261030c';
+var BUILD='20261030d';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
