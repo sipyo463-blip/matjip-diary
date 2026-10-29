@@ -56,7 +56,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .link{text-align:center;font-size:13px;color:var(--sub);padding:4px;text-decoration:underline;text-underline-offset:3px}
 .ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .grow{flex:1;min-height:0}
-.cl{flex:3 1 0;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
+.cl{flex:0 1 auto;max-height:50%;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
 .mnl{flex:none;display:flex;flex-direction:column;gap:8px;padding-bottom:4px}
 
 /* home */
@@ -876,7 +876,7 @@ function vConfirm(){
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">CHECK / PLACE</div><div class="h1">여기 맞아요?</div><div class="sub" style="margin-top:2px">"'+esc(S.query)+'"</div></div>'+okBtn+'</div>'+
  '<div class="cl">'+rows+none+'</div>'+
- (hasMap?'<div class="mapbox" style="flex:2 1 0;min-height:0"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.gpsFrom==='device'?'찍은 위치':S.photoGps&&S.gpsFrom==='pin'?'고른 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
+ (hasMap?'<div class="mapbox" style="flex:1 1 0;min-height:120px"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.gpsFrom==='device'?'찍은 위치':S.photoGps&&S.gpsFrom==='pin'?'고른 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
  manual+'</div>';
 }
 function vFind(){
@@ -1594,7 +1594,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261030d';
+var BUILD='20261030e';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
