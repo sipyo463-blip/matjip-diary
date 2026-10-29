@@ -870,14 +870,14 @@ function vFill(){
 }
 function vConfirm(){
  var rows=S.cands.map(function(c,i){return '<button class="row'+(i===S.sel?' sel':'')+'" data-act="pick" data-i="'+i+'"><div class="th">'+ini(c.name)+'</div><div class="mid"><div class="nm">'+esc(c.name)+'</div><div class="meta">'+esc(cat(c.name))+' · '+esc(c.addr)+'</div></div><div class="rt'+(i?' g':'')+'">'+fmt(c.d)+'</div></button>'}).join('');
- var ref=S.photoGps||S.pos,hasMap=ref||S.cands.length;
+ var ref=S.photoGps||S.pos,hasMap=S.cands.length>0;
  var none=!S.cands.length?'<div class="empty">찾지 못했어요.<br>아래에 직접 입력해 주세요.</div>':'';
  var okBtn=S.cands.length?'<button class="btn" style="width:84px;flex:none;padding:10px 0" data-act="confirmSave">'+(S.editMode?'바꾸기':'확인')+'</button>':'';
- var manual=S.editMode?'':'<div class="mnl"><div class="meta" style="font-size:13px;font-weight:700">원하는 곳이 없어요? 직접 입력</div><div class="two" style="flex:none"><div class="field" style="flex:1;font-size:14px"><input id="mName" value="'+esc(S.mName||'')+'" placeholder="가게 이름 (예: 성수동 연탄 생고기집)" autocomplete="off" enterkeyhint="done"></div><button class="btn" style="width:84px;flex:none" data-act="manualGo" id="mBtn">저장</button></div></div>';
+ var manual=S.editMode?'':'<div class="mnl"><div class="meta" style="font-size:13px;font-weight:700">원하는 곳이 없어요? 직접 입력</div><div class="two" style="flex:none"><div class="field" style="flex:1;font-size:14px"><input id="mName" value="'+esc(S.mName!=null?S.mName:(S.cands.length?'':S.query))+'" placeholder="가게 이름 (예: 성수동 연탄 생고기집)" autocomplete="off" enterkeyhint="done"></div><button class="btn" style="width:84px;flex:none" data-act="manualGo" id="mBtn">저장</button></div></div>';
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">CHECK / PLACE</div><div class="h1">여기 맞아요?</div><div class="sub" style="margin-top:2px">"'+esc(S.query)+'"</div></div>'+okBtn+'</div>'+
  '<div class="cl">'+rows+none+'</div>'+
- (hasMap?'<div class="mapbox" style="flex:1 1 0;min-height:120px"><div id="cmap"></div>'+(ref?'<button class="melocbtn" data-act="myloc" aria-label="내 위치로"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>':'')+'</div>':'<div class="grow"></div>')+
+ (hasMap?'<div class="mapbox" style="flex:1 1 0;min-height:120px"><div id="cmap"></div>'+(ref?'<button class="melocbtn" data-act="myloc" aria-label="내 위치로"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>':'')+'</div>':'')+
  manual+'</div>';
 }
 function vFind(){
@@ -1596,7 +1596,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261030f';
+var BUILD='20261030g';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
