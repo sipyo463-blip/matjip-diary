@@ -118,7 +118,8 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .rev .pn{animation:pnPop .6s ease-out both;animation-delay:inherit}
 @keyframes pnPop{0%{transform:scale(2.4)}60%{transform:scale(.9)}100%{transform:scale(1)}}
 .phwrap{position:relative;flex:none;width:64px;height:64px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.phwrap:active{transform:scale(.95)}
+.phpic{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.phbadge::after{content:'';position:absolute;inset:-10px}
 .phbadge{position:absolute;right:-5px;bottom:-5px;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .phwrap.busy .th{opacity:.4}
 .phwrap.busy .phbadge{animation:destinySpin .8s linear infinite}
@@ -909,8 +910,8 @@ function vDetail(){
  var spec=function(k,v){return '<div class="r"><div class="k">'+k+'</div><div class="v"></div><div>'+v+'</div></div>'};
  var srcL={camera:'촬영',album:'앨범 사진',name:'이름 입력',remote:'이름 입력',sheet:'시트에서 가져옴'}[p.src]||'';
  return '<div class="scr"><div class="edge"></div><div class="top" style="align-items:center">'+back()+'<button class="chip" data-act="edit">정보 수정</button></div>'+
- '<div style="display:flex;gap:14px;align-items:center">'+'<div class="phwrap" data-act="rePhoto">'+(p.photo?'<div class="th" style="width:64px;height:64px;flex:none;background-image:url('+p.photo+')"></div>':'<div class="th" style="width:64px;height:64px;flex:none">'+ini(p.name)+'</div>')+'<span class="phbadge">↻</span></div>'+
- '<div style="flex:1;min-width:0"><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><div class="h1" style="font-size:28px">'+esc(p.name)+'</div>'+(p.photo&&p.thumb?'<div class="sub" style="font-size:11px;margin-top:2px">네이버 검색 사진 · 사진을 누르면 다른 사진을 찾아요</div>':(p.photo?'':'<div class="sub" style="font-size:11px;margin-top:2px">사진을 누르면 찾아 와요</div>'))+'</div></div>'+
+ '<div style="display:flex;gap:14px;align-items:center">'+'<div class="phwrap">'+(p.photo?'<div class="th phpic" style="width:64px;height:64px;flex:none;background-image:url('+p.photo+')"></div>':'<div class="th" data-act="rePhoto" style="width:64px;height:64px;flex:none">'+ini(p.name)+'</div>')+'<span class="phbadge" data-act="rePhoto">↻</span></div>'+
+ '<div style="flex:1;min-width:0"><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><div class="h1" style="font-size:28px">'+esc(p.name)+'</div>'+(p.photo&&p.thumb?'<div class="sub" style="font-size:11px;margin-top:2px">네이버 검색 사진 · ↻를 누르면 다른 사진을 찾아요 · 사진을 꾹 누르면 크게 봐요</div>':(p.photo?'':'<div class="sub" style="font-size:11px;margin-top:2px">사진을 누르면 찾아 와요</div>'))+'</div></div>'+
  (p.needsAddr?'<div class="warn"><span>위치가 아직 없어요</span><button data-act="fill">주소 채우기</button></div>':'')+
  '<div class="spec">'+spec('주 소',esc(p.addr||'-'))+
  '<div class="r"><div class="k">메 모</div><div class="v"></div><textarea id="memoEd" rows="2" placeholder="메모를 남겨요">'+esc(p.memo||'')+'</textarea></div>'+
@@ -1342,6 +1343,20 @@ async function rvPhoto(){
 function nvUrl(p){return p&&(p.naver||(p.name?naverLink(p.name,p.addr):''))||''}
 function naverLink(name,addr){return 'https://map.naver.com/p/search/'+encodeURIComponent((String(name||'').trim()+' '+(dongOf(addr)||String(addr||'').split(/\s+/)[1]||'')).trim())}
 function dongOf(addr){var m=String(addr||'').match(/([가-힣0-9]+(?:동|읍|면|가))(?:\s|$)/);return m?m[1]:''}
+(function(){
+ var ov=null;
+ function hide(){if(ov){ov.remove();ov=null}}
+ document.addEventListener('pointerdown',function(e){
+  var t=e.target.closest&&e.target.closest('.phpic');if(!t)return;
+  var m=(t.style.backgroundImage||'').match(/url\(["']?(.*?)["']?\)$/);if(!m)return;
+  hide();ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:16px;pointer-events:none';
+  var im=document.createElement('img');im.src=m[1];im.style.cssText='max-width:100%;max-height:100%;border-radius:14px;object-fit:contain';
+  ov.appendChild(im);document.body.appendChild(ov);
+ });
+ ['pointerup','pointercancel','pointerleave','scroll'].forEach(function(n){document.addEventListener(n,hide,true)});
+ document.addEventListener('contextmenu',function(e){if(e.target.closest&&e.target.closest('.phpic'))e.preventDefault()});
+})();
 var PH_VARIANTS=['맛집','','음식','메뉴','외관','내부','간판'];
 async function rePhoto(){
  var p=byId(S.openId);if(!p||thumbBusy['re'+p.id])return;
@@ -1580,7 +1595,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261030b';
+var BUILD='20261030c';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
