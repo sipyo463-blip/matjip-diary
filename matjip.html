@@ -498,6 +498,19 @@ async function proxySearch(q,near){
 }
 async function searchPlaces(q,near){
  var px=await proxySearch(q,near);if(px.length)return px;
+ var pp=q.trim().split(/\s+/);
+ if(pp.length>1){
+  var rest0=pp.slice(1).join(' '),clean=pp[0].replace(/(앞|근처|주변|인근|부근|일대|쪽)$/,'')||pp[0];
+  var within=function(list,c){return c?list.filter(function(x){return dist(c.lat,c.lng,x.lat,x.lng)<4000}):list};
+  var fin=function(list,c){if(!list.length)return null;if(near)list.forEach(function(x){x.d=dist(near.lat,near.lng,x.lat,x.lng)});else if(c)list.forEach(function(x){x.d=dist(c.lat,c.lng,x.lat,x.lng)});list.sort(function(a,b){return (a.d||0)-(b.d||0)});return list.slice(0,5)};
+  var ar=[];
+  try{ar=await proxySearch(/역$/.test(clean)?clean:clean+'역',null);if(!ar.length)ar=await proxySearch(clean,null)}catch(e){}
+  var ac=ar[0]?{lat:ar[0].lat,lng:ar[0].lng}:null;
+  var v1=[];try{v1=within(await proxySearch(clean+' '+rest0,null),ac)}catch(e){}
+  var r1=fin(v1,ac);if(r1)return r1;
+  var dn0=ar[0]?dongOf(ar[0].addr):'';
+  if(dn0){var v2=[];try{v2=within(await proxySearch(dn0+' '+rest0,null),ac)}catch(e){}var r2=fin(v2,ac);if(r2)return r2}
+ }
  var base={q:q,countrycodes:'kr',limit:10};
  if(near){base.viewbox=vb(near,0.2);base.bounded=0}
  var res=[];try{res=await nomi('search',base)}catch(e){}
@@ -1596,7 +1609,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261030g';
+var BUILD='20261030h';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
