@@ -138,6 +138,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .pn.on{background:var(--stamp);transform:scale(1.15)}
 .pn.sm{width:22px;height:22px}
 .me{width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:0 0 0 7px rgba(62,53,43,.14)}
+.melocbtn{position:absolute;right:10px;bottom:10px;z-index:500;width:40px;height:40px;border-radius:50%;background:var(--paper);color:var(--ink);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 6px rgba(0,0,0,.3)}
 .melab{position:absolute;left:10px;top:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
 .mapctrls{position:absolute;right:12px;bottom:calc(46% + 12px);z-index:600;display:flex;flex-direction:column;gap:10px;transition:bottom .2s}
 .fwrap[data-sheet=low] #fmap{inset:0!important}
@@ -876,7 +877,7 @@ function vConfirm(){
  return '<div class="scr"><div class="edge"></div>'+back()+
  '<div class="top"><div><div class="eyebrow">CHECK / PLACE</div><div class="h1">여기 맞아요?</div><div class="sub" style="margin-top:2px">"'+esc(S.query)+'"</div></div>'+okBtn+'</div>'+
  '<div class="cl">'+rows+none+'</div>'+
- (hasMap?'<div class="mapbox" style="flex:1 1 0;min-height:120px"><div id="cmap"></div>'+(ref?'<div class="melab">'+(S.photoGps&&S.gpsFrom==='device'?'찍은 위치':S.photoGps&&S.gpsFrom==='pin'?'고른 위치':'내 위치')+'</div>':'')+'</div>':'<div class="grow"></div>')+
+ (hasMap?'<div class="mapbox" style="flex:1 1 0;min-height:120px"><div id="cmap"></div>'+(ref?'<button class="melocbtn" data-act="myloc" aria-label="내 위치로"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>':'')+'</div>':'<div class="grow"></div>')+
  manual+'</div>';
 }
 function vFind(){
@@ -1470,6 +1471,7 @@ document.addEventListener('click',function(e){
   case 'confirmSave':confirmSave();break;
   case 'saveHere':saveHere();break;
   case 'manual':S.mName=S.query||'';S.mAddr='';go('manual');break;
+  case 'myloc':var rf=S.photoGps||S.pos;if(rf&&S.map)mFit(S.map,[[rf.lat,rf.lng]],[34,34,34,34],16);break;
   case 'manualGo':manualGo();break;
   case 'rvSave':rvSave();break;
   case 'rvPhoto':rvPhoto();break;
@@ -1594,7 +1596,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261030e';
+var BUILD='20261030f';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
