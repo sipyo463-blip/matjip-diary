@@ -833,7 +833,7 @@ window.go=go;function go(sc,opt){
  if(opt.reset){S.stack=[]}else{S.stack.push(S.screen);try{history.pushState({},'')}catch(e){}}
  S.screen=sc;render();
 }
-window.addEventListener('popstate',function(){killMap();S.screen=S.stack.pop()||'home';render()});
+window.addEventListener('popstate',function(){killMap();var pv=S.stack.pop()||'home';if(S.screen==='detail'){pv='home';S.stack=[]}S.screen=pv;render()});
 try{history.replaceState({},'')}catch(e){}
 
 /* ---------- views ---------- */
@@ -1609,7 +1609,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261030h';
+var BUILD='20261101a';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
