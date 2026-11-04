@@ -381,7 +381,7 @@ async function uploadPhotos(code){
 var G_KNOWN_KEY='matjip_gknown',G_SINCE_KEY='matjip_gsince',gReady=false,gBusy=false,gLast=0;
 function gKnown(){try{return JSON.parse(localStorage.getItem(G_KNOWN_KEY)||'{}')}catch(e){return {}}}
 function gSetKnown(k){try{localStorage.setItem(G_KNOWN_KEY,JSON.stringify(k))}catch(e){}}
-function gSlim(p){return {id:p.id,name:p.name,addr:p.addr||'',lat:p.lat==null?null:p.lat,lng:p.lng==null?null:p.lng,memo:p.memo||'',naver:p.naver||null,createdAt:p.createdAt||0,pic:p.pic||null,img:(p.photo&&p.photo.indexOf('http')===0)?p.photo:null}}
+function gSlim(p){return {id:p.id,name:p.name,addr:p.addr||'',lat:p.lat==null?null:p.lat,lng:p.lng==null?null:p.lng,memo:p.memo||'',naver:p.naver||null,createdAt:p.createdAt||0,pic:p.pic||null,nid:p.nid||null,img:(p.photo&&p.photo.indexOf('http')===0)?p.photo:null}}
 function gHash(p){var x=gSlim(p);return [x.name,x.addr,x.lat,x.lng,x.memo,x.naver,x.pic].join('|')}
 function gNorm(t){return String(t||'').replace(/\s+/g,'').toLowerCase()}
 async function gCall(body){
@@ -434,8 +434,8 @@ async function pullSync(doRender){
   items.forEach(function(it){
    var p=loc[it.id];
    if(p&&k[it.id]!==undefined&&k[it.id]!==''&&k[it.id]!==gHash(p))return; // 내 수정이 아직 올라가기 전이면 내 것을 우선
-   if(p){p.name=it.name;p.addr=it.addr;p.lat=it.lat;p.lng=it.lng;p.memo=it.memo;if(it.naver)p.naver=it.naver;p.pic=it.pic||p.pic;p.needsAddr=(it.lat==null);if(!p.photo&&it.img){p.photo=it.img;p.thumb='img'}}
-   else{places.push({id:it.id,name:it.name,addr:it.addr,lat:it.lat,lng:it.lng,memo:it.memo,naver:it.naver||null,visited:false,createdAt:it.createdAt||Date.now(),photo:it.img||null,thumb:it.img?'img':null,stamps:null,pic:it.pic||null,src:'share',needsAddr:it.lat==null});var cp=carry[it.id];if(cp){var np=places[places.length-1];np.stamps=cp.stamps||null;np.visited=!!cp.visited;if(cp.photo){np.photo=cp.photo;np.thumb=cp.thumb||null}np.createdAt=cp.createdAt||np.createdAt}}
+   if(p){p.name=it.name;p.addr=it.addr;p.lat=it.lat;p.lng=it.lng;p.memo=it.memo;if(it.naver)p.naver=it.naver;if(it.nid)p.nid=it.nid;p.pic=it.pic||p.pic;p.needsAddr=(it.lat==null);if(!p.photo&&it.img){p.photo=it.img;p.thumb='img'}}
+   else{places.push({id:it.id,name:it.name,addr:it.addr,lat:it.lat,lng:it.lng,memo:it.memo,naver:it.naver||null,nid:it.nid||null,visited:false,createdAt:it.createdAt||Date.now(),photo:it.img||null,thumb:it.img?'img':null,stamps:null,pic:it.pic||null,src:'share',needsAddr:it.lat==null});var cp=carry[it.id];if(cp){var np=places[places.length-1];np.stamps=cp.stamps||null;np.visited=!!cp.visited;if(cp.photo){np.photo=cp.photo;np.thumb=cp.thumb||null}np.createdAt=cp.createdAt||np.createdAt}}
    k[it.id]=gHash(p||places[places.length-1]);changed=true;
   });
   (j.tomb||[]).forEach(function(id){var p=loc[id];if(p&&(k[id]===undefined||k[id]===gHash(p))){places=places.filter(function(x){return x.id!==id});changed=true}delete k[id]});
@@ -446,7 +446,7 @@ async function pullSync(doRender){
   if(changed&&doRender!==false&&(S.screen==='find'||S.screen==='home'))try{render()}catch(e){}
   fillMissingThumbs();
   pushSync();
-  setTimeout(fillMissingCoords,2500);
+  setTimeout(function(){fillMissingCoords().then(function(){fillNids()})},2500);
  }catch(e){}
 }
 function byIdLocalHas(id){return places.some(function(p){return p.id===id})}
@@ -477,6 +477,34 @@ async function fillMissingCoords(){
   persist();if(S.screen==='find')try{refreshFind(false)}catch(e){}
  }catch(e){}
  geoBusy=false;
+}
+var nidBusy=false;
+async function lookupNid(p){
+ var reg=dongOf(p.addr)||String(p.addr||'').split(/\s+/)[1]||'';
+ var q=(p.name+' '+reg).trim();
+ var r=await fetch(PLACE_PROXY+'?nid='+encodeURIComponent(q));var j=await r.json();
+ return j&&/^\d{5,}$/.test(j.id||'')?j.id:'';
+}
+async function fillNids(){
+ if(nidBusy||!PLACE_PROXY)return;nidBusy=true;
+ try{
+  var now=Date.now(),todo=places.filter(function(p){return p&&p.name&&p.lat!=null&&!p.nid&&!(p.nidTry&&now-p.nidTry<7*86400000)});
+  var got=[];
+  for(var i=0;i<todo.length;i++){
+   if(document.hidden){await new Promise(function(r){setTimeout(r,3000)});i--;continue}
+   var p=todo[i];if(!byId(p.id))continue;
+   try{var id=await lookupNid(p);if(id){p.nid=id;got.push(p)}}catch(e){}
+   p.nidTry=Date.now();
+   if(got.length>=10||i===todo.length-1){await pushNids(got);got=[];persist(true)}
+   await new Promise(function(r2){setTimeout(r2,1200)});
+  }
+  persist(true);
+ }catch(e){}
+ nidBusy=false;
+}
+async function pushNids(arr){
+ try{var k=gKnown(),up=[];arr.forEach(function(p){if(k[p.id]===gHash(p)){var x=gSlim(p);x.t=Date.now();up.push(x)}});
+  if(up.length)await gCall({action:'save',up:up,del:[]})}catch(e){}
 }
 async function fillMissingThumbs(){
  if(fillBusy||!PLACE_PROXY)return;
@@ -1456,7 +1484,7 @@ async function rvPhoto(){
  if(th){r.photo=th.img;r.thumb=th.from;render()}else toast('사진을 찾지 못했어요');
 }
 /* ---------- 음식점 사진 썸네일 (사진 없이 저장할 때, 네이버 이미지 검색) ---------- */
-function nvUrl(p){return p&&(p.naver||(p.name?naverLink(p.name,p.addr):''))||''}
+function nvUrl(p){if(p&&p.nid)return 'https://m.place.naver.com/restaurant/'+p.nid+'/review/visitor';return p&&(p.naver||(p.name?naverLink(p.name,p.addr):''))||''}
 function naverLink(name,addr){return 'https://map.naver.com/p/search/'+encodeURIComponent((String(name||'').trim()+' '+(dongOf(addr)||String(addr||'').split(/\s+/)[1]||'')).trim())}
 function dongOf(addr){var m=String(addr||'').match(/([가-힣0-9]+(?:동|읍|면|가))(?:\s|$)/);return m?m[1]:''}
 (function(){
@@ -1734,7 +1762,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105g';
+var BUILD='20261105h';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
