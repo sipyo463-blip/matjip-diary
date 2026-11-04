@@ -367,7 +367,7 @@ function glob_(p) {
         var lat = isFinite(x.lat) && x.lat !== null ? Number(x.lat) : null, lng = isFinite(x.lng) && x.lng !== null ? Number(x.lng) : null;
         var img = gStr_(x.img, 600); if (!/^https?:\/\//.test(img)) img = '';
         d2.items[id] = { id: id, name: gStr_(x.name, 80), addr: gStr_(x.addr, 120), lat: lat, lng: lng, memo: gStr_(x.memo, 300),
-          naver: gStr_(x.naver, 300) || null, createdAt: Number(x.createdAt) || now, pic: gStr_(x.pic, 60) || (old && old.pic) || null,
+          naver: gStr_(x.naver, 300) || null, createdAt: Number(x.createdAt) || now, pic: gStr_(x.pic, 60) || (old && old.pic) || null, nid: gStr_(x.nid, 20).replace(/[^0-9]/g, '') || (old && old.nid) || null,
           img: (old && old.img) || img || null, t: t, u: now };
         delete d2.tomb[id];
       });
@@ -402,7 +402,14 @@ function nid_(q) {
       }
       if (!id) { var m = t.match(/(?:place\.naver\.com|map\.naver\.com\/p\/entry\/place)\/(?:restaurant|place|cafe|hospital|hairshop)\/(\d{5,})/); if (m) id = m[1]; }
       tries.push({ via: srcs[i][0], code: code, len: t.length, id: id });
-      if (id) return { id: id, name: name, via: srcs[i][0], tries: tries };
+      if (id) {
+        var title = '';
+        try {
+          var pr = UrlFetchApp.fetch('https://m.place.naver.com/restaurant/' + id + '/home', { headers: H, muteHttpExceptions: true, followRedirects: true });
+          var tm = pr.getContentText().match(/<title>([^<]*)<\/title>/); title = tm ? tm[1].replace(/\s*[:\-|]\s*네이버.*$/, '').trim() : '';
+        } catch (e2) {}
+        return { id: id, name: name, title: title, via: srcs[i][0] };
+      }
     } catch (err) { tries.push({ via: srcs[i][0], err: String(err).slice(0, 80) }); }
   }
   return { id: '', tries: tries };
