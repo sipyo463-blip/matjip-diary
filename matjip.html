@@ -263,7 +263,7 @@ function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MS
 function installHidden(){try{return localStorage.getItem(INSTALL_HIDE_KEY)==='1'}catch(e){return false}}
 function hideInstall(){try{localStorage.setItem(INSTALL_HIDE_KEY,'1')}catch(e){}render()}
 function installBanner(){
- if(!isShared()||isStandalone()||installHidden())return'';
+ if(!isShared()||isStandalone())return'';
  var body=S.installEv?
   '<div class="d">앱처럼 설치하면 더 편하게 쓸 수 있어요</div>':
   isIOS()?'<div class="d">Safari 하단 공유 버튼 → \'홈 화면에 추가\'를 누르면 앱처럼 쓸 수 있어요</div>':
@@ -271,7 +271,6 @@ function installBanner(){
  return '<div class="card" style="padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:2px">'+
   '<div style="flex:1"><b style="font-size:13px">앱으로 설치하기</b>'+body+'</div>'+
   (S.installEv?'<button class="chip" data-act="install">설치</button>':'')+
-  '<button class="link" data-act="hideInstall" style="padding:4px;font-size:18px;line-height:1">×</button>'+
   '</div>';
 }
 function iconNoteSeen(){try{return localStorage.getItem('matjip_icon_v2')==='1'}catch(e){return true}}
@@ -1039,7 +1038,7 @@ function vDetail(){
  var srcL={camera:'촬영',album:'앨범 사진',name:'이름 입력',remote:'이름 입력',sheet:'시트에서 가져옴'}[p.src]||'';
  return '<div class="scr"><div class="edge"></div><div class="top" style="align-items:center">'+back()+'</div>'+
  '<div style="display:flex;gap:14px;align-items:center">'+'<div class="phwrap">'+(p.photo?'<div class="th phpic" style="width:64px;height:64px;flex:none;background-image:url('+p.photo+')"></div>':'<div class="th" data-act="rePhoto" style="width:64px;height:64px;flex:none">'+ini(p.name)+'</div>')+'<span class="phbadge" data-act="rePhoto">↻</span></div>'+
- '<div style="flex:1;min-width:0"><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><textarea id="nameEd" rows="1" class="h1 ed" style="font-size:26px;line-height:1.2;resize:none;overflow:hidden;display:block">'+esc(p.name)+'</textarea>'+(p.photo&&p.thumb?'<div class="sub" style="font-size:11px;margin-top:2px">네이버 검색 사진 · ↻를 누르면 다른 사진을 찾아요 · 사진을 꾹 누르면 크게 봐요</div>':(p.photo?'':'<div class="sub" style="font-size:11px;margin-top:2px">사진을 누르면 찾아 와요</div>'))+'</div></div>'+
+ '<div style="flex:1;min-width:0"><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><textarea id="nameEd" rows="1" class="h1 ed" style="font-size:26px;line-height:1.2;resize:none;overflow:hidden;display:block">'+esc(p.name)+'</textarea>'+(p.photo&&p.thumb?'':(p.photo?'':'<div class="sub" style="font-size:11px;margin-top:2px">사진을 누르면 찾아 와요</div>'))+'</div></div>'+
  (p.needsAddr?'<div class="warn"><span>위치가 아직 없어요</span><button data-act="fill">주소 채우기</button></div>':'')+
  '<div class="spec"><div class="r"><div class="k">주 소</div><div class="v"></div><textarea id="addrEd" rows="2" placeholder="주소를 적어요">'+esc(p.addr||'')+'</textarea></div>'+
  '<div class="r"><div class="k">메 모</div><div class="v"></div><textarea id="memoEd" rows="2" placeholder="메모를 남겨요">'+esc(p.memo||'')+'</textarea></div>'+
@@ -1221,7 +1220,7 @@ function refreshFind(fit){
  var pts=[];
  a.forEach(function(p){if(p.lat==null)return;pts.push([p.lat,p.lng]);
   var on=S.hl===p.id;
-  S.mk.push(mAdd(M,p.lat,p.lng,pinHtml('',on?'on':'sm'),on?28:20,function(){blurFind();S.noCenter=false;S.hl=p.id;refreshFind(false);var r=$('#r_'+p.id);if(r)r.scrollIntoView({block:'nearest'})},on?500:0));
+  S.mk.push(mAdd(M,p.lat,p.lng,pinHtml('',on?'on':'sm'),on?28:20,function(){blurFind();S.noCenter=false;S.cenAnim=true;S.hl=p.id;refreshFind(false);var r=$('#r_'+p.id);if(r)r.scrollIntoView({block:'nearest'})},on?500:0));
  });
  S.findPts=pts.slice();
  if(S.pos)S.mk.push(mAdd(M,S.pos.lat,S.pos.lng,ME,14,null,0));
@@ -1265,22 +1264,26 @@ function mPanBy(M,dx,dy){try{if(M.t==='n'){if(M.m.panBy)M.m.panBy(new naver.maps
 function centerSelected(p){
  if(!p||p.lat==null||S.noCenter)return;
  var M=S.map;if(!M)return;
- var z;try{z=M.m.getZoom()}catch(e){z=16}
- var go1=function(){
+ var go1=function(anim){
   if(S.map!==M)return;
-  try{mSize(M)}catch(e){}
-  mView(M,p.lat,p.lng,z);
   try{
+   mSize(M);
    var el=document.getElementById('fmap'),sh=document.querySelector('.sheet');if(!el)return;
    var r=el.getBoundingClientRect(),cw=r.width,ch=r.height;
    var vis=ch;if(sh){var st=sh.getBoundingClientRect().top-r.top;if(st>60&&st<ch)vis=st}
-   var tx=cw/2,ty=vis/2,dx=cw/2-tx,dy=ch/2-ty;
-   if(Math.abs(dy)<2)return;
-   if(M.t==='n'){var pr=M.m.getProjection();var c=pr.fromOffsetToCoord(new naver.maps.Point(cw/2+dx,ch/2+dy));M.m.setCenter(c)}
-   else{var ll=M.m.containerPointToLatLng([cw/2+dx,ch/2+dy]);M.m.setView(ll,z,{animate:false})}
+   var mx,my,pr,c;
+   if(M.t==='n'){pr=M.m.getProjection();var o=pr.fromCoordToOffset(new naver.maps.LatLng(p.lat,p.lng));mx=o.x;my=o.y}
+   else{var q=M.m.latLngToContainerPoint([p.lat,p.lng]);mx=q.x;my=q.y}
+   var dx=mx-cw/2,dy=my-vis/2;
+   if(Math.abs(dx)<3&&Math.abs(dy)<3)return;
+   if(M.t==='n'){c=pr.fromOffsetToCoord(new naver.maps.Point(cw/2+dx,ch/2+dy));if(anim)M.m.panTo(c,{duration:450,easing:'easeOutCubic'});else M.m.setCenter(c)}
+   else{var ll=M.m.containerPointToLatLng([cw/2+dx,ch/2+dy]);if(anim)M.m.panTo(ll,{animate:true,duration:.45,easeLinearity:.25});else M.m.setView(ll,M.m.getZoom(),{animate:false})}
   }catch(e){}
  };
- go1();setTimeout(go1,200);setTimeout(go1,500);
+ var first=!S.cenDone;S.cenDone=true;
+ go1(!first&&!!S.cenAnim);
+ setTimeout(function(){go1(false)},first||!S.cenAnim?200:700);
+ if(first||!S.cenAnim)setTimeout(function(){go1(false)},500);
 }
 var sheetTimer=null;
 function blurFind(){var a=document.activeElement;if(a&&a.id==='qFind')a.blur()}
@@ -1449,7 +1452,7 @@ async function saveHere(){
 }
 function vReview(){
  var r=S.rv;if(!r)return vHome();
- var cap=r.mine?'내가 고른 사진':r.thumb?'네이버 검색 사진 · 실제 매장과 다를 수 있어요':'';
+ var cap=r.mine?'내가 고른 사진':'';
  var ph='<div style="display:flex;gap:12px;align-items:center">'+(r.photo?'<div class="th" style="width:56px;height:56px;flex:none;background-image:url('+r.photo+')"></div>':'<div class="th" style="width:56px;height:56px;flex:none">'+ini(r.name)+'</div>')+'<div class="sub" style="font-size:12px;flex:1;min-width:0">'+(r.photo?(cap||'저장할 때 사진'):'사진 없이 저장돼요')+'</div></div>';
  var pbtn=r.mine?'':'<div class="two">'+'<button class="btn line" data-act="rvPhoto">사진 다시 찾기</button>'+(r.photo?'<button class="btn line" data-act="rvNoPhoto">사진 빼기</button>':'')+'</div>';
  return '<div class="scr" style="overflow-y:auto"><div class="edge"></div>'+back()+
@@ -1762,7 +1765,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105h';
+var BUILD='20261105i';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
