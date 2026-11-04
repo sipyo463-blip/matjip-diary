@@ -1261,8 +1261,7 @@ function mPanBy(M,dx,dy){try{if(M.t==='n'){if(M.m.panBy)M.m.panBy(new naver.maps
 function centerSelected(p){
  if(!p||p.lat==null||S.noCenter)return;
  var M=S.map;if(!M)return;
- var first=!S.cenDone;S.cenDone=true;
- var anim=!first&&!!S.cenAnim;
+ var anim=!!S.cenAnim;
  S.cenP=p;
  // 매 프레임 목표(보이는 지도 영역의 중앙)를 다시 계산해서 남은 거리의 일부씩만 이동 → 시트가 움직여도 끊기지 않아요
  var delta=function(){
@@ -1295,7 +1294,7 @@ function centerSelected(p){
   if(S.map!==M){S.cenRun=false;return}
   var dist=0;try{dist=move(.11)}catch(e){}
   calm=dist<1.5?calm+1:0;
-  if(calm>=6||now-t0>3000){S.cenRun=false;try{move(1)}catch(e){}return}
+  if(calm>=6||now-t0>3000){S.cenRun=false;S.cenAnim=false;try{move(1)}catch(e){}return}
   requestAnimationFrame(step);
  };
  requestAnimationFrame(step);
@@ -1780,7 +1779,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105l';
+var BUILD='20261105m';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
