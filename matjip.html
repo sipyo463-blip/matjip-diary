@@ -1191,7 +1191,8 @@ function placeRowHtml(p,idAttr){
  return '<button class="row sel" data-act="open" data-id="'+p.id+'"'+(idAttr?' id="r_'+p.id+'"':'')+'>'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div><div class="meta" style="margin-top:2px">'+dateLabel(p.createdAt)+' 추가'+'</div></div><div style="text-align:right">'+rt+(stampsOf(p).length?'<span class="stamp">'+stampsOf(p).length+'회 방문</span>':'')+'</div></button>';
 }
 function refreshFind(fit){
- var a=listData();
+ var fast=!fit&&S.hl&&byId(S.hl);
+ var a=fast?null:listData();
  $('#chips').innerHTML=[['near','내 주변'],['recent','최근 저장'],['often','자주 간 곳'],['unvisited','안 가본 곳']].map(function(c){return '<button class="chip'+(S.chip===c[0]?' on':'')+'" data-act="chip" data-c="'+c[0]+'">'+c[1]+'</button>'}).join('');
  var selP=S.hl?byId(S.hl):null;
  var st=$('#sheetTitle'),fb=$('#fullBtn'),cb=$('#clearHlBtn');
@@ -1212,6 +1213,11 @@ function refreshFind(fit){
    return '<button class="row" data-act="open" data-id="'+p.id+'" id="r_'+p.id+'">'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(cat(p.name))+' · '+esc(p.memo||p.addr||'')+'</div></div><div style="text-align:right">'+rt+(stampsOf(p).length?'<span class="stamp">'+stampsOf(p).length+'회 방문</span>':'')+'</div></button>';
   }).join(''):'<div class="empty">'+(places.length?((S.chip==='near'&&!S.pos&&!S.locFail&&!S.q.trim())?'내 주변 맛집을 찾는 중…':'찾는 곳이 없어요.'):'아직 저장한 곳이 없어요.<br>길에서 발견하면 저장하기를 눌러요.')+'</div>';
  }
+ if(fast){var tk=S.rfTok=(S.rfTok||0)+1;setTimeout(function(){if(S.rfTok!==tk)return;refreshFindMap(fit,listData())},0)}
+ else{S.rfTok=(S.rfTok||0)+1;refreshFindMap(fit,a)}
+}
+function refreshFindMap(fit,a){
+ var selP=S.hl?byId(S.hl):null;
  var M=S.map;if(!M)return;
  mDel(M,S.mk);S.mk=[];
  var pts=[];
@@ -1780,7 +1786,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105n';
+var BUILD='20261105o';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
