@@ -120,6 +120,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 @keyframes cardIn{0%{opacity:0;transform:translateY(36px) scale(.9);filter:blur(6px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:none;filter:none}}
 .rev .pn{animation:pnPop .6s ease-out both;animation-delay:inherit}
 @keyframes pnPop{0%{transform:scale(2.4)}60%{transform:scale(.9)}100%{transform:scale(1)}}
+.h1.ed{width:100%;background:transparent;border:0;border-bottom:1px dashed var(--line);padding:0 0 2px;outline:none;color:var(--ink);font-family:inherit;font-weight:800;letter-spacing:-0.02em;border-radius:0}
 .phwrap{position:relative;flex:none;width:64px;height:64px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .phpic{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 .phbadge::after{content:'';position:absolute;inset:-10px}
@@ -1006,15 +1007,16 @@ function vDetail(){
  var d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null;
  var spec=function(k,v){return '<div class="r"><div class="k">'+k+'</div><div class="v"></div><div>'+v+'</div></div>'};
  var srcL={camera:'촬영',album:'앨범 사진',name:'이름 입력',remote:'이름 입력',sheet:'시트에서 가져옴'}[p.src]||'';
- return '<div class="scr"><div class="edge"></div><div class="top" style="align-items:center">'+back()+'<button class="chip" data-act="edit">정보 수정</button></div>'+
+ return '<div class="scr"><div class="edge"></div><div class="top" style="align-items:center">'+back()+'</div>'+
  '<div style="display:flex;gap:14px;align-items:center">'+'<div class="phwrap">'+(p.photo?'<div class="th phpic" style="width:64px;height:64px;flex:none;background-image:url('+p.photo+')"></div>':'<div class="th" data-act="rePhoto" style="width:64px;height:64px;flex:none">'+ini(p.name)+'</div>')+'<span class="phbadge" data-act="rePhoto">↻</span></div>'+
- '<div style="flex:1;min-width:0"><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><div class="h1" style="font-size:28px">'+esc(p.name)+'</div>'+(p.photo&&p.thumb?'<div class="sub" style="font-size:11px;margin-top:2px">네이버 검색 사진 · ↻를 누르면 다른 사진을 찾아요 · 사진을 꾹 누르면 크게 봐요</div>':(p.photo?'':'<div class="sub" style="font-size:11px;margin-top:2px">사진을 누르면 찾아 와요</div>'))+'</div></div>'+
+ '<div style="flex:1;min-width:0"><div class="eyebrow">PLACE / '+esc(cat(p.name))+(d!=null?' / '+fmt(d).toUpperCase():'')+'</div><textarea id="nameEd" rows="1" class="h1 ed" style="font-size:26px;line-height:1.2;resize:none;overflow:hidden;display:block">'+esc(p.name)+'</textarea>'+(p.photo&&p.thumb?'<div class="sub" style="font-size:11px;margin-top:2px">네이버 검색 사진 · ↻를 누르면 다른 사진을 찾아요 · 사진을 꾹 누르면 크게 봐요</div>':(p.photo?'':'<div class="sub" style="font-size:11px;margin-top:2px">사진을 누르면 찾아 와요</div>'))+'</div></div>'+
  (p.needsAddr?'<div class="warn"><span>위치가 아직 없어요</span><button data-act="fill">주소 채우기</button></div>':'')+
- '<div class="spec">'+spec('주 소',esc(p.addr||'-'))+
+ '<div class="spec"><div class="r"><div class="k">주 소</div><div class="v"></div><textarea id="addrEd" rows="2" placeholder="주소를 적어요">'+esc(p.addr||'')+'</textarea></div>'+
  '<div class="r"><div class="k">메 모</div><div class="v"></div><textarea id="memoEd" rows="2" placeholder="메모를 남겨요">'+esc(p.memo||'')+'</textarea></div>'+
  spec('등록일',(function(t){var x=new Date(t||Date.now());return x.getFullYear()+'년 '+(x.getMonth()+1)+'월 '+x.getDate()+'일'})(p.createdAt))+(d!=null?spec('거 리',fmt(d)):'')+'</div>'+
 (nvUrl(p)?'<a class="nvl" href="'+esc(nvUrl(p))+'">N 네이버 리뷰 보기</a>':'')+
  stampCardHtml(p)+
+ '<button class="link" data-act="fill" style="align-self:center">지도 위치 다시 찾기</button>'+
  '<div class="grow"></div>'+
  '<button class="link" data-act="del">삭제</button></div>';
 }
@@ -1362,7 +1364,7 @@ function render(){
  if(S.screen==='save'&&!S.pos)locate().then(function(){var e=$('#loc');if(e)e.textContent=S.posLabel});
  if(S.screen==='confirm')confirmMap();
  if(S.screen==='pin')pinMap();
- if(S.screen==='detail')ensureThumb(byId(S.openId));
+ if(S.screen==='detail'){ensureThumb(byId(S.openId));var ne=$('#nameEd');if(ne){ne.style.height='auto';ne.style.height=ne.scrollHeight+'px'}}
  if(S.screen==='find')afterFind();
 }
 
@@ -1621,8 +1623,11 @@ document.addEventListener('input',function(e){
  else if(i==='eQ'&&S.draft)S.draft.q=e.target.value;
  else if(i==='qFind'){S.q=e.target.value;refreshFind(false)}
 });
+document.addEventListener('input',function(e){if(e.target.id==='nameEd'){var t=e.target;if(t.value.indexOf('\n')>=0)t.value=t.value.replace(/\n/g,'');t.style.height='auto';t.style.height=t.scrollHeight+'px'}});
 document.addEventListener('change',function(e){
  if(e.target.id==='memoEd'){var p=byId(S.openId);if(p){p.memo=e.target.value;persist()}}
+ if(e.target.id==='nameEd'){var pn=byId(S.openId),nv=e.target.value.trim();if(pn&&nv){pn.name=nv;persist()}else if(pn)e.target.value=pn.name}
+ if(e.target.id==='addrEd'){var pa=byId(S.openId);if(pa){var av=e.target.value.trim();if(av!==(pa.addr||'')){pa.addr=av;persist();searchPlaces((av+' '+pa.name).trim(),null).then(function(cs){var c=cs&&cs[0];if(c&&!c.approx&&c.lat!=null&&pa.addr===av){pa.lat=c.lat;pa.lng=c.lng;pa.needsAddr=false;persist();toast('새 주소로 지도 위치도 맞췄어요');if(S.screen==='detail'&&S.openId===pa.id)render()}}).catch(function(){})}}}
 });
 document.addEventListener('keydown',function(e){
  if(e.key!=='Enter')return;var i=e.target.id;
@@ -1713,7 +1718,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261104h';
+var BUILD='20261105b';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
