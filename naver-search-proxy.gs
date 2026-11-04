@@ -117,6 +117,7 @@ function doPost(e) {
     if (b.pick) return out_(pick_(b.pick));
     if (b.destiny) return out_(destiny_(b.destiny));
     if (b.room) return out_(room_(b.room));
+    if (b.glob) return out_(glob_(b.glob));
     if (b.photoUp) return out_(picUp_(b.photoUp));
     var m = String(b.ocr || '').match(/^data:(image\/[a-z+]+);base64,(.+)$/);
     if (!m) return out_({ error: 'bad image' });
@@ -325,4 +326,57 @@ function picGet_(fileId) {
     if (String(ct).indexOf('image/') !== 0) return out_({ error: 'not image' });
     return out_({ img: 'data:' + ct + ';base64,' + Utilities.base64Encode(blob.getBytes()) });
   } catch (err) { return out_({ error: 'not found' }); }
+}
+
+
+// ---- 전체 공용 맛집 저장소 (모든 사용자가 같은 목록을 공유) ----
+// load: {action:'load', since:ms}  save: {action:'save', up:[place...], del:[id...]}
+function gFile_() {
+  var props = PropertiesService.getScriptProperties();
+  var fid = props.getProperty('G_FILE');
+  if (fid) { try { return DriveApp.getFileById(fid); } catch (e) {} }
+  var f = DriveApp.createFile('matjip-global.json', '{"items":{},"tomb":{}}', 'application/json');
+  props.setProperty('G_FILE', f.getId());
+  return f;
+}
+function gRead_(f) {
+  try { var d = JSON.parse(f.getBlob().getDataAsString() || '{}'); d.items = d.items || {}; d.tomb = d.tomb || {}; return d; }
+  catch (e) { return { items: {}, tomb: {} }; }
+}
+function gStr_(v, n) { return String(v == null ? '' : v).slice(0, n); }
+function glob_(p) {
+  var f = gFile_();
+  if (p.action === 'load') {
+    var d = gRead_(f), since = Number(p.since) || 0, items = [], tomb = [], k;
+    for (k in d.items) if (d.items[k].u > since) items.push(d.items[k]);
+    for (k in d.tomb) if (d.tomb[k] > since) tomb.push(k);
+    return { items: items, tomb: tomb, now: Date.now(), total: Object.keys(d.items).length };
+  }
+  if (p.action === 'save') {
+    var lock = LockService.getScriptLock();
+    lock.waitLock(20000);
+    try {
+      var d2 = gRead_(f), now = Date.now(), up = Array.isArray(p.up) ? p.up.slice(0, 400) : [], del = Array.isArray(p.del) ? p.del.slice(0, 400) : [];
+      up.forEach(function (x) {
+        var id = gStr_(x && x.id, 40).replace(/[^A-Za-z0-9_-]/g, '');
+        if (!id || !x.name) return;
+        var old = d2.items[id], t = Number(x.t) || now;
+        if (d2.tomb[id] && d2.tomb[id] >= t) return;
+        if (old && old.t > t) return;
+        var lat = isFinite(x.lat) && x.lat !== null ? Number(x.lat) : null, lng = isFinite(x.lng) && x.lng !== null ? Number(x.lng) : null;
+        var img = gStr_(x.img, 600); if (!/^https?:\/\//.test(img)) img = '';
+        d2.items[id] = { id: id, name: gStr_(x.name, 80), addr: gStr_(x.addr, 120), lat: lat, lng: lng, memo: gStr_(x.memo, 300),
+          naver: gStr_(x.naver, 300) || null, createdAt: Number(x.createdAt) || now, pic: gStr_(x.pic, 60) || (old && old.pic) || null,
+          img: (old && old.img) || img || null, t: t, u: now };
+        delete d2.tomb[id];
+      });
+      del.forEach(function (id) {
+        id = gStr_(id, 40);
+        if (d2.items[id]) { delete d2.items[id]; d2.tomb[id] = now; }
+      });
+      f.setContent(JSON.stringify(d2));
+      return { ok: true, total: Object.keys(d2.items).length, now: now };
+    } finally { lock.releaseLock(); }
+  }
+  return { error: 'bad action' };
 }

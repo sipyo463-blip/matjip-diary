@@ -347,10 +347,9 @@ function askConfirm(title,opt){
  });
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
-function genRoomCode(){var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',s='';for(var i=0;i<6;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s}
-function getRoomCode(){try{return localStorage.getItem(ROOM_KEY)||null}catch(e){return null}}
-function isShared(){return !!getRoomCode()}
-function ensureRoomCode(){var c=getRoomCode();if(!c){c=genRoomCode();try{localStorage.setItem(ROOM_KEY,c)}catch(e){}}return c}
+function getRoomCode(){return 'GLOBAL'}
+function isShared(){return true}
+function ensureRoomCode(){return 'GLOBAL'}
 var picBusy=false;
 function picKeyOf(ph){return ph?ph.length+':'+ph.slice(-24):''}
 function shrinkData(src,w){return new Promise(function(res){var im=new Image();im.onload=function(){try{res(shrink(im,w))}catch(e){res(null)}};im.onerror=function(){res(null)};im.src=src})}
@@ -370,34 +369,78 @@ async function uploadPhotos(code){
  }catch(e){}
  picBusy=false;
 }
-async function pushSync(){
- var code=getRoomCode();if(!code)return;
- await uploadPhotos(code);
- try{await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({room:{code:code,action:'save',data:places}})})}catch(e){}
+var G_KNOWN_KEY='matjip_gknown',G_SINCE_KEY='matjip_gsince',gReady=false,gBusy=false,gLast=0;
+function gKnown(){try{return JSON.parse(localStorage.getItem(G_KNOWN_KEY)||'{}')}catch(e){return {}}}
+function gSetKnown(k){try{localStorage.setItem(G_KNOWN_KEY,JSON.stringify(k))}catch(e){}}
+function gSlim(p){return {id:p.id,name:p.name,addr:p.addr||'',lat:p.lat==null?null:p.lat,lng:p.lng==null?null:p.lng,memo:p.memo||'',naver:p.naver||null,createdAt:p.createdAt||0,pic:p.pic||null,img:(p.photo&&p.photo.indexOf('http')===0)?p.photo:null}}
+function gHash(p){var x=gSlim(p);return [x.name,x.addr,x.lat,x.lng,x.memo,x.naver,x.pic].join('|')}
+function gNorm(t){return String(t||'').replace(/\s+/g,'').toLowerCase()}
+async function gCall(body){
+ var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({glob:body})});
+ return await r.json();
 }
-function mergeFromServer(items){
- var byIdLocal={};places.forEach(function(p){byIdLocal[p.id]=p});
- var merged=items.map(function(it){
-  var loc=byIdLocal[it.id]||{};
-  return {
-   id:it.id,name:it.name||'',addr:it.addr||'',lat:(it.lat!=null?it.lat:null),lng:(it.lng!=null?it.lng:null),
-   memo:it.memo||'',naver:it.naver||loc.naver||null,visited:!!it.visited||!!(loc.stamps&&loc.stamps.length),createdAt:it.createdAt||loc.createdAt||Date.now(),
-   photo:loc.photo||null,thumb:loc.thumb||null,stamps:loc.stamps||null,pic:it.pic||loc.pic||null,picKey:loc.picKey||null,picGot:loc.picGot||null,thumbTry:loc.thumbTry||null,src:loc.src||'share',needsAddr:(it.lat==null)
-  };
- });
- var serverIds={};items.forEach(function(it){serverIds[it.id]=1});
- var localOnly=places.filter(function(p){return !serverIds[p.id]});
- places=merged.concat(localOnly);
- places.sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+async function pushSync(){
+ if(!gReady||gBusy)return;gBusy=true;
+ try{
+  await uploadPhotos('GLOBAL');
+  var k=gKnown(),up=[],ids={};
+  places.forEach(function(p){if(!p||!p.id||!p.name)return;ids[p.id]=1;if(k[p.id]!==gHash(p)){var x=gSlim(p);x.t=Date.now();up.push(x)}});
+  var del=Object.keys(k).filter(function(id){return !ids[id]});
+  while(up.length||del.length){
+   var u=up.splice(0,150),d=del.splice(0,150);
+   var j=await gCall({action:'save',up:u,del:d});
+   if(!j||!j.ok)break;
+   u.forEach(function(x){var p=byId(x.id);if(p)k[x.id]=gHash(p)});
+   d.forEach(function(id){delete k[id]});
+   gSetKnown(k);
+  }
+ }catch(e){}
+ gBusy=false;
 }
 async function pullSync(doRender){
- var code=getRoomCode();if(!code)return;
+ if(!PLACE_PROXY)return;
  try{
-  var r=await fetch(PLACE_PROXY,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({room:{code:code,action:'load'}})});
-  var j=await r.json();
-  if(j&&j.items){mergeFromServer(j.items);persist(true);if(doRender)render();fillMissingThumbs()}
+  var since=0;try{since=Number(localStorage.getItem(G_SINCE_KEY))||0}catch(e){}
+  var j=await gCall({action:'load',since:since});
+  if(!j||!j.items)return;
+  var k=gKnown(),first=!Object.keys(k).length&&!since,carry={};
+  var items=j.items,changed=false;
+  if(first){
+   var forceSeed=/[?&]seed=1/.test(location.search);
+   if(!j.total&&!items.length){
+    var withLat=places.filter(function(p){return p&&p.lat!=null}).length;
+    if(!(forceSeed||(places.length>=30&&withLat>=places.length*0.5)))return; // 시드 자격이 없는 기기는 공용 목록이 생길 때까지 대기
+   }else{
+    var byName={},byKey={};items.forEach(function(it){byName[gNorm(it.name)]=it;byKey[gNorm(it.name)+'|'+gNorm(it.addr)]=it});
+    places=places.filter(function(p){
+     if(!p)return false;
+     var it=byKey[gNorm(p.name)+'|'+gNorm(p.addr)]||(p.src==='sheet'?byName[gNorm(p.name)]:null);
+     if(!it)return true;
+     carry[it.id]=p;return false;
+    });
+    changed=true;
+   }
+  }
+  var loc={};places.forEach(function(p){loc[p.id]=p});
+  items.forEach(function(it){
+   var p=loc[it.id];
+   if(p&&k[it.id]!==undefined&&k[it.id]!==''&&k[it.id]!==gHash(p))return; // 내 수정이 아직 올라가기 전이면 내 것을 우선
+   if(p){p.name=it.name;p.addr=it.addr;p.lat=it.lat;p.lng=it.lng;p.memo=it.memo;if(it.naver)p.naver=it.naver;p.pic=it.pic||p.pic;p.needsAddr=(it.lat==null);if(!p.photo&&it.img){p.photo=it.img;p.thumb='img'}}
+   else{places.push({id:it.id,name:it.name,addr:it.addr,lat:it.lat,lng:it.lng,memo:it.memo,naver:it.naver||null,visited:false,createdAt:it.createdAt||Date.now(),photo:it.img||null,thumb:it.img?'img':null,stamps:null,pic:it.pic||null,src:'share',needsAddr:it.lat==null});var cp=carry[it.id];if(cp){var np=places[places.length-1];np.stamps=cp.stamps||null;np.visited=!!cp.visited;if(cp.photo){np.photo=cp.photo;np.thumb=cp.thumb||null}np.createdAt=cp.createdAt||np.createdAt}}
+   k[it.id]=gHash(p||places[places.length-1]);changed=true;
+  });
+  (j.tomb||[]).forEach(function(id){var p=loc[id];if(p&&(k[id]===undefined||k[id]===gHash(p))){places=places.filter(function(x){return x.id!==id});changed=true}delete k[id]});
+  places.sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+  gSetKnown(k);try{localStorage.setItem(G_SINCE_KEY,String(Math.max(0,(j.now||Date.now())-3000)))}catch(e){}
+  gReady=true;
+  persist(true);
+  if(changed&&doRender!==false&&(S.screen==='find'||S.screen==='home'))try{render()}catch(e){}
+  fillMissingThumbs();
+  pushSync();
+  setTimeout(fillMissingCoords,2500);
  }catch(e){}
 }
+function byIdLocalHas(id){return places.some(function(p){return p.id===id})}
 function needPic(p){return !!(p.pic&&!p.picKey&&p.picGot!==p.pic&&(!p.photo||p.thumb))}
 var fillBusy=false;
 var geoBusy=false;
@@ -414,10 +457,10 @@ async function fillMissingCoords(){
    p.geoTry=Date.now();
    if(r&&r.lat!=null){p.lat=r.lat;p.lng=r.lng;if(r.addr)p.addr=r.addr;p.needsAddr=false;got++}
    done++;
-   if(done%5===0){persist(true);if(S.screen==='find')try{refreshFind(false)}catch(e){}}
+   if(done%5===0){persist();if(S.screen==='find')try{refreshFind(false)}catch(e){}}
    await new Promise(function(r2){setTimeout(r2,400)});
   }
-  persist(true);if(S.screen==='find')try{refreshFind(false)}catch(e){}
+  persist();if(S.screen==='find')try{refreshFind(false)}catch(e){}
  }catch(e){}
  geoBusy=false;
 }
@@ -765,7 +808,7 @@ function pickReroll(){
  runPick(S.pickRanked.map(function(r){return r.place.id}));
 }
 function pickRetry(){S.pickStep=0;S.pickRanked=[];S.pickDestiny=false;S.destinySpin=false;S.destinyTok++;render();}
-function shareLink(){return location.origin+location.pathname+'?r='+getRoomCode()}
+function shareLink(){return location.origin+location.pathname}
 function shareCopy(){copy(shareLink())}
 function shareSend(){
  if(navigator.share){navigator.share({title:'나의 맛집 다이어리',text:'맛집을 같이 기록해요!',url:shareLink()}).catch(function(){})}
@@ -990,13 +1033,12 @@ function vShare(){
  var link=shareLink();
  return '<div class="scr" style="overflow-y:auto"><div class="edge"></div>'+back()+
  '<div><div class="eyebrow">SHARE</div><div class="h1" style="font-size:26px">친구와 공유하기</div></div>'+
- '<div class="sub" style="font-size:12px;margin-top:4px">이 링크를 보내면 친구도 똑같은 맛집 리스트를 보고 추가할 수 있어요. (사진 제외)</div>'+
+ '<div class="sub" style="font-size:12px;margin-top:4px">이 링크를 쓰는 모든 사람이 같은 맛집 리스트를 보고, 누가 저장하든 모두에게 보여요.</div>'+
  '<div class="card" style="padding:16px;margin-top:12px;word-break:break-all;font-size:13px">'+esc(link)+'</div>'+
  '<div style="display:flex;gap:8px;margin-top:10px">'+
  '<button class="chip" data-act="shareCopy">링크 복사</button>'+
  (navigator.share?'<button class="chip" data-act="shareSend">공유하기</button>':'')+
  '</div>'+
- '<button class="link" data-act="stopShare" style="margin-top:16px">공유 중단하기</button>'+
  '<div class="grow"></div></div>';
 }
 function vPin(){
@@ -1607,8 +1649,9 @@ function loadNaver(){
  });
 }
 render();
-if(isShared())pullSync(true);else maybeImport();
-setTimeout(fillMissingThumbs,1500);setTimeout(fillMissingCoords,3500);
+pullSync(true);
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&Date.now()-gLast>20000){gLast=Date.now();pullSync(true)}});
+setTimeout(fillMissingThumbs,1500);
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
 try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portrait').catch(function(){})}catch(e){}
 
@@ -1639,7 +1682,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261104a';
+var BUILD='20261104b';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
