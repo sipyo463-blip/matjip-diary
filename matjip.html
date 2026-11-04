@@ -1238,8 +1238,21 @@ function centerSelected(p){
  if(!p||p.lat==null||S.noCenter)return;
  var M=S.map;if(!M)return;
  var z;try{z=M.m.getZoom()}catch(e){z=16}
- var go1=function(){if(S.map!==M)return;try{mSize(M)}catch(e){}mView(M,p.lat,p.lng,z)};
- go1();setTimeout(go1,160);setTimeout(go1,450);
+ var go1=function(){
+  if(S.map!==M)return;
+  try{mSize(M)}catch(e){}
+  mView(M,p.lat,p.lng,z);
+  try{
+   var el=document.getElementById('fmap'),sh=document.querySelector('.sheet');if(!el)return;
+   var r=el.getBoundingClientRect(),cw=r.width,ch=r.height;
+   var vis=ch;if(sh){var st=sh.getBoundingClientRect().top-r.top;if(st>60&&st<ch)vis=st}
+   var tx=cw/2,ty=vis/2,dx=cw/2-tx,dy=ch/2-ty;
+   if(Math.abs(dy)<2)return;
+   if(M.t==='n'){var pr=M.m.getProjection();var c=pr.fromOffsetToCoord(new naver.maps.Point(cw/2+dx,ch/2+dy));M.m.setCenter(c)}
+   else{var ll=M.m.containerPointToLatLng([cw/2+dx,ch/2+dy]);M.m.setView(ll,z,{animate:false})}
+  }catch(e){}
+ };
+ go1();setTimeout(go1,200);setTimeout(go1,500);
 }
 var sheetTimer=null;
 function blurFind(){var a=document.activeElement;if(a&&a.id==='qFind')a.blur()}
@@ -1721,7 +1734,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105f';
+var BUILD='20261105g';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
