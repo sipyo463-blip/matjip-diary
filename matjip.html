@@ -164,6 +164,9 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .fwrap{position:absolute;inset:0;background:var(--paper)}
 #fmap{touch-action:none}
 #fmap{inset:0 0 46% 0!important}
+.ibn{position:absolute;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:700;display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--paper);border-radius:14px;padding:10px 12px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.ibn b{font-size:13px}.ibn .d{font-size:11.5px;opacity:.8;margin-top:2px}.ibn .chip{background:var(--paper);color:var(--ink)}.ibn .link{color:var(--paper)}
+.fwrap.hasib .fsearch{top:calc(env(safe-area-inset-top,0px) + 82px)}
 .fsearch{position:absolute;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 14px);z-index:600;display:flex;flex-direction:column;gap:8px}
 .chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}.chips .chip{flex:none;white-space:nowrap}
 .chip{height:34px;padding:0 14px;border-radius:9px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:700;display:flex;align-items:center}
@@ -266,6 +269,11 @@ function installBanner(){
   (S.installEv?'<button class="chip" data-act="install">설치</button>':'')+
   '<button class="link" data-act="hideInstall" style="padding:4px;font-size:18px;line-height:1">×</button>'+
   '</div>';
+}
+function installTop(){
+ if(isStandalone()||installHidden())return'';
+ var d=S.installEv?'홈 화면에 추가하면 앱처럼 바로 열려요':isIOS()?'Safari 하단 공유 버튼 → \'홈 화면에 추가\'':'브라우저 메뉴 → \'홈 화면에 추가\'';
+ return '<div class="ibn"><div style="flex:1;min-width:0"><b>📲 앱으로 설치하기</b><div class="d">'+d+'</div></div>'+(S.installEv?'<button class="chip" data-act="install">설치</button>':'')+'<button class="link" data-act="hideInstall" aria-label="닫기" style="padding:4px 6px;font-size:20px;line-height:1">×</button></div>';
 }
 var $=function(s){return document.querySelector(s)};
 var app=$('#app');
@@ -392,6 +400,27 @@ async function pullSync(doRender){
 }
 function needPic(p){return !!(p.pic&&!p.picKey&&p.picGot!==p.pic&&(!p.photo||p.thumb))}
 var fillBusy=false;
+var geoBusy=false;
+async function fillMissingCoords(){
+ if(geoBusy||!PLACE_PROXY)return;geoBusy=true;
+ try{
+  var now=Date.now(),todo=places.filter(function(p){return p&&p.name&&p.lat==null&&!(p.geoTry&&now-p.geoTry<7*86400000)});
+  var total=todo.length,done=0,got=0;
+  for(var i=0;i<todo.length;i++){
+   if(document.hidden){await new Promise(function(r){setTimeout(r,3000)});i--;continue}
+   var p=todo[i];if(!byId(p.id))continue;
+   var r=null;
+   try{var cs=await searchPlaces(((p.addr||'')+' '+p.name).trim(),null);r=cs&&cs[0]&&!cs[0].approx?cs[0]:null}catch(e){}
+   p.geoTry=Date.now();
+   if(r&&r.lat!=null){p.lat=r.lat;p.lng=r.lng;if(r.addr)p.addr=r.addr;p.needsAddr=false;got++}
+   done++;
+   if(done%5===0){persist(true);if(S.screen==='find')try{refreshFind(false)}catch(e){}}
+   await new Promise(function(r2){setTimeout(r2,400)});
+  }
+  persist(true);if(S.screen==='find')try{refreshFind(false)}catch(e){}
+ }catch(e){}
+ geoBusy=false;
+}
 async function fillMissingThumbs(){
  if(fillBusy||!PLACE_PROXY)return;
  fillBusy=true;
@@ -894,7 +923,8 @@ function vConfirm(){
  manual+'</div>';
 }
 function vFind(){
- return '<div class="fwrap'+(S.mapFull?' mapfull':'')+'" data-sheet="'+S.sheetMode+'"><div id="fmap"></div>'+
+ var ib=S.mapFull?'':installTop();
+ return '<div class="fwrap'+(S.mapFull?' mapfull':'')+(ib?' hasib':'')+'" data-sheet="'+S.sheetMode+'"><div id="fmap"></div>'+ib+
  '<div class="fsearch"><div class="field" style="height:50px"><input id="qFind" value="'+esc(S.q)+'" placeholder="이름·동네·메모 검색" autocomplete="off"></div>'+
  '<div class="chips" id="chips"></div></div>'+
  '<div class="mapctrls">'+
@@ -1578,7 +1608,7 @@ function loadNaver(){
 }
 render();
 if(isShared())pullSync(true);else maybeImport();
-setTimeout(fillMissingThumbs,1500);
+setTimeout(fillMissingThumbs,1500);setTimeout(fillMissingCoords,3500);
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();S.installEv=e;if(S.screen==='save'||S.screen==='home')render()});
 try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portrait').catch(function(){})}catch(e){}
 
@@ -1609,7 +1639,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261101a';
+var BUILD='20261104a';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
