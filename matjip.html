@@ -1105,7 +1105,7 @@ async function manualGo(){
  if(addr){try{c=await searchPlaces(addr+' '+name,near)}catch(e){c=[]}}
  if(c.length&&c[0].d!=null&&c[0].d<2000||c.length&&!near){S.cands=c;S.query=name;S.sel=0;S.mName=S.mAddr='';go('confirm');return}
  var fp=S.fillId?byId(S.fillId):null;
- var rv={name:name,addr:addr,lat:null,lng:null,memo:S.memo||'',src:S.src,photo:S.photo||null,thumb:null,fillId:fp?fp.id:null,mine:!!S.photo,noLoc:true,naver:null};
+ var rv={name:name,addr:addr,lat:null,lng:null,memo:S.memo||'',src:S.src,photo:null,thumb:null,fillId:fp?fp.id:null,mine:false,noLoc:true,naver:null};
  if(!rv.photo){toast('음식점 사진을 찾는 중…');var th=await foodThumb(name,addr);if(th){rv.photo=th.img;rv.thumb=th.from}}
  S.mName=S.mAddr='';S.rv=rv;go('review');
 }
@@ -1456,7 +1456,7 @@ async function confirmSave(){
  var c=S.cands[S.sel];if(!c)return;
  if(S.editMode&&S.draft){var d=S.draft;d.addr=c.addr;d.lat=c.lat;d.lng=c.lng;d.q=c.name;d.loc=true;d.naver=c.approx?null:naverLink(c.name,c.addr);S.editMode=false;S.fillId=null;S.cands=[];toast('위치를 골랐어요. 저장을 눌러 확정해요');history.back();return}
  var fp=S.fillId?byId(S.fillId):null;
- var rv={naver:c.approx?null:naverLink(c.name,c.addr),name:fp?fp.name:c.name,addr:c.addr,lat:c.lat,lng:c.lng,memo:S.memo||(fp&&fp.memo)||'',src:fp?fp.src:S.src,photo:S.photo||(fp&&fp.photo)||null,thumb:null,fillId:fp?fp.id:null,mine:!!S.photo};
+ var rv={naver:c.approx?null:naverLink(c.name,c.addr),name:fp?fp.name:c.name,addr:c.addr,lat:c.lat,lng:c.lng,memo:S.memo||(fp&&fp.memo)||'',src:fp?fp.src:S.src,photo:(fp&&fp.photo)||null,thumb:null,fillId:fp?fp.id:null,mine:false};
  if(fp&&fp.photo&&!S.photo)rv.thumb=fp.thumb||null;
  if(!rv.photo){toast('음식점 사진을 찾는 중…');var th=await foodThumb(rv.name,rv.addr);if(th){rv.photo=th.img;rv.thumb=th.from}}
  S.rv=rv;go('review');
@@ -1467,7 +1467,7 @@ async function saveHere(){
  var name=(S.query||'').trim();
  // 기존 맛집을 다시 찾다가 못 찾은 경우엔 기존 위치/사진을 그대로 유지해요
  var addr=fp?(fp.addr||''):'',lat=fp?fp.lat:null,lng=fp?fp.lng:null;
- var rv={name:name,addr:addr,lat:lat,lng:lng,memo:S.memo||(fp&&fp.memo)||'',src:fp?fp.src:S.src,photo:S.photo||(fp&&fp.photo)||null,thumb:fp?(fp.thumb||null):null,fillId:fp?fp.id:null,mine:!!S.photo,noLoc:(lat==null),naver:fp?(fp.naver||null):null};
+ var rv={name:name,addr:addr,lat:lat,lng:lng,memo:S.memo||(fp&&fp.memo)||'',src:fp?fp.src:S.src,photo:(fp&&fp.photo)||null,thumb:fp?(fp.thumb||null):null,fillId:fp?fp.id:null,mine:false,noLoc:(lat==null),naver:fp?(fp.naver||null):null};
  if(!rv.photo&&name){toast('음식점 사진을 찾는 중…');var th=await foodThumb(name,addr);if(th){rv.photo=th.img;rv.thumb=th.from}}
  S.rv=rv;go('review');
 }
@@ -1786,7 +1786,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105o';
+var BUILD='20261105p';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
