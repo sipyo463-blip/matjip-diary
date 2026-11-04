@@ -25,7 +25,7 @@ function doGet(e) {
   var secret = props.getProperty('NAVER_SECRET');
   if (!id || !secret) return out_({ items: [], error: 'missing keys' });
 
-  var url = 'https://naverapihub.apigw.ntruss.com/search/v1/local?display=5&sort=random&query=' + encodeURIComponent(q);
+  var url = 'https://naverapihub.apigw.ntruss.com/search/v1/local?display=5&sort=' + (e.parameter.s === 'comment' ? 'comment' : 'random') + '&query=' + encodeURIComponent(q);
   var res = UrlFetchApp.fetch(url, {
     headers: { 'X-NCP-APIGW-API-KEY-ID': id, 'X-NCP-APIGW-API-KEY': secret },
     muteHttpExceptions: true

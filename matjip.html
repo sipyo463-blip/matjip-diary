@@ -448,18 +448,23 @@ async function pullSync(doRender){
 function byIdLocalHas(id){return places.some(function(p){return p.id===id})}
 function needPic(p){return !!(p.pic&&!p.picKey&&p.picGot!==p.pic&&(!p.photo||p.thumb))}
 var fillBusy=false;
-var geoBusy=false;
+var geoBusy=false,geoSort=false;
 async function fillMissingCoords(){
  if(geoBusy||!PLACE_PROXY)return;geoBusy=true;
  try{
-  var now=Date.now(),todo=places.filter(function(p){return p&&p.name&&p.lat==null&&!(p.geoTry&&now-p.geoTry<7*86400000)});
+  var now=Date.now(),todo=places.filter(function(p){return p&&p.name&&p.lat==null&&!(p.geoTry2&&now-p.geoTry2<7*86400000)});
   var total=todo.length,done=0,got=0;
   for(var i=0;i<todo.length;i++){
    if(document.hidden){await new Promise(function(r){setTimeout(r,3000)});i--;continue}
    var p=todo[i];if(!byId(p.id))continue;
    var r=null;
-   try{var cs=await searchPlaces(((p.addr||'')+' '+p.name).trim(),null);r=cs&&cs[0]&&!cs[0].approx?cs[0]:null}catch(e){}
-   p.geoTry=Date.now();
+   var qs=[((p.addr||'')+' '+p.name).trim(),p.name];
+   var mm=String(p.memo||'').replace(/[^가-힣A-Za-z0-9 ]/g,' ').trim().split(/\s+/)[0];
+   if(mm&&mm.length>1)qs.push(((p.addr||'').split(/\s+/)[0]+' '+mm+' '+p.name).trim());
+   geoSort=true;
+   for(var qi=0;qi<qs.length&&!r;qi++){try{var cs=await searchPlaces(qs[qi],null);r=cs&&cs[0]&&!cs[0].approx?cs[0]:null}catch(e){}}
+   geoSort=false;
+   p.geoTry2=Date.now();
    if(r&&r.lat!=null){p.lat=r.lat;p.lng=r.lng;if(r.addr)p.addr=r.addr;p.needsAddr=false;got++}
    done++;
    if(done%5===0){persist();if(S.screen==='find')try{refreshFind(false)}catch(e){}}
@@ -567,7 +572,7 @@ function mapRes(arr,near){
 async function proxySearch(q,near){
  if(!PLACE_PROXY)return [];
  try{
-  var r=await fetch(PLACE_PROXY+(PLACE_PROXY.indexOf('?')<0?'?':'&')+'q='+encodeURIComponent(q));var j=await r.json();
+  var r=await fetch(PLACE_PROXY+(PLACE_PROXY.indexOf('?')<0?'?':'&')+'q='+encodeURIComponent(q)+(geoSort?'&s=comment':''));var j=await r.json();
   var out=(j.items||[]).filter(function(i){return isFinite(i.lat)&&isFinite(i.lng)}).map(function(i){return {name:i.name,addr:i.addr||'',lat:+i.lat,lng:+i.lng,d:near?dist(near.lat,near.lng,+i.lat,+i.lng):null}});
   if(near)out.sort(function(a,b){return a.d-b.d});
   return out.slice(0,5);
@@ -579,7 +584,7 @@ async function searchPlaces(q,near){
  if(pp.length>1){
   var rest0=pp.slice(1).join(' '),clean=pp[0].replace(/(앞|근처|주변|인근|부근|일대|쪽)$/,'')||pp[0];
   var within=function(list,c){return c?list.filter(function(x){return dist(c.lat,c.lng,x.lat,x.lng)<4000}):list};
-  var fin=function(list,c){if(!list.length)return null;if(near)list.forEach(function(x){x.d=dist(near.lat,near.lng,x.lat,x.lng)});else if(c)list.forEach(function(x){x.d=dist(c.lat,c.lng,x.lat,x.lng)});list.sort(function(a,b){return (a.d||0)-(b.d||0)});return list.slice(0,5)};
+  var fin=function(list,c){if(!list.length)return null;if(near)list.forEach(function(x){x.d=dist(near.lat,near.lng,x.lat,x.lng)});else if(c)list.forEach(function(x){x.d=dist(c.lat,c.lng,x.lat,x.lng)});if(near)list.sort(function(a,b){return (a.d||0)-(b.d||0)});return list.slice(0,5)};
   var ar=[];
   try{ar=await proxySearch(/역$/.test(clean)?clean:clean+'역',null);if(!ar.length)ar=await proxySearch(clean,null)}catch(e){}
   var ac=ar[0]?{lat:ar[0].lat,lng:ar[0].lng}:null;
@@ -1688,7 +1693,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261104e';
+var BUILD='20261104f';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
