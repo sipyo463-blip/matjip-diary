@@ -138,7 +138,9 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .leaflet-tile-pane{filter:sepia(.55) saturate(.55) contrast(.92) brightness(1.04)}
 .pn{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--paper);border:2px solid var(--paper);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .pn.on{background:var(--stamp);transform:scale(1.15)}
-.pn.sm{width:22px;height:22px}
+.pn.sm{width:6px;height:6px;border-width:1px;box-shadow:none;margin:3px}
+.selpin{position:relative;width:40px;height:48px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.selnm{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:2px;white-space:nowrap;font-size:13px;font-weight:800;color:var(--ink);text-shadow:-1.5px 0 var(--paper),1.5px 0 var(--paper),0 -1.5px var(--paper),0 1.5px var(--paper),0 0 4px var(--paper);pointer-events:none}
 .me{width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:0 0 0 7px rgba(62,53,43,.14)}
 .melocbtn{position:absolute;right:10px;bottom:10px;z-index:500;width:40px;height:40px;border-radius:50%;background:var(--paper);color:var(--ink);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 6px rgba(0,0,0,.3)}
 .melab{position:absolute;left:10px;top:10px;z-index:500;font-size:11px;font-weight:700;background:var(--paper);padding:2px 8px;border-radius:9px}
@@ -1098,13 +1100,14 @@ function mkMap(id,center,zoom){
  m.attributionControl.setPrefix(false);
  return {t:'l',m:m};
 }
-function mAdd(M,lat,lng,html,sz,fn,z){
+function mAdd(M,lat,lng,html,sz,fn,z,ay){
+ if(ay==null)ay=sz/2;
  if(M.t==='n'){
-  var o=new naver.maps.Marker({position:new naver.maps.LatLng(lat,lng),map:M.m,icon:{content:html,anchor:new naver.maps.Point(sz/2,sz/2)},zIndex:(z||0)+10,clickable:!!fn});
+  var o=new naver.maps.Marker({position:new naver.maps.LatLng(lat,lng),map:M.m,icon:{content:html,anchor:new naver.maps.Point(sz/2,ay)},zIndex:(z||0)+10,clickable:!!fn});
   if(fn)naver.maps.Event.addListener(o,'click',fn);
   return o;
  }
- var l=L.marker([lat,lng],{icon:L.divIcon({className:'',html:html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:z||0,interactive:!!fn}).addTo(M.m);
+ var l=L.marker([lat,lng],{icon:L.divIcon({className:'',html:html,iconSize:[sz,sz],iconAnchor:[sz/2,ay]}),zIndexOffset:z||0,interactive:!!fn}).addTo(M.m);
  if(fn)l.on('click',fn);
  return l;
 }
@@ -1124,6 +1127,7 @@ function mCenter(M){var c=M.m.getCenter();return M.t==='n'?{lat:c.lat(),lng:c.ln
 function mIdle(M,fn){if(M.t==='n')naver.maps.Event.addListener(M.m,'idle',fn);else M.m.on('moveend',fn)}
 function mSize(M){if(M.t==='l')M.m.invalidateSize();else try{naver.maps.Event.trigger(M.m,'resize')}catch(e){}}
 function mKill(M){if(M.t==='l')M.m.remove();else try{M.m.destroy()}catch(e){}}
+function selPinHtml(name){return '<div class="selpin"><svg viewBox="0 0 40 48" width="40" height="48"><path d="M20 2C10.6 2 3 9.4 3 18.6 3 31 20 46 20 46s17-15 17-27.4C37 9.4 29.4 2 20 2z" fill="#F0705A" stroke="#2B2623" stroke-width="3.5" stroke-linejoin="round"/><g fill="#2B2623"><ellipse cx="14.5" cy="15" rx="3.6" ry="5"/><rect x="13.3" y="18" width="2.4" height="11" rx="1.2"/><rect x="23" y="11" width="2" height="8" rx="1"/><rect x="26.6" y="11" width="2" height="8" rx="1"/><rect x="19.4" y="11" width="2" height="8" rx="1"/><path d="M19.4 17h9.2v2a4.6 4.6 0 0 1-9.2 0z"/><rect x="23.4" y="20" width="2.2" height="9" rx="1.1"/></g></svg><div class="selnm">'+esc(name)+'</div></div>'}
 function pinHtml(n,cls){return '<div class="pn '+(cls||'')+'">'+(n==null?'':n)+'</div>'}
 var ME='<div class="me"></div>';
 function confirmMap(){
@@ -1189,7 +1193,7 @@ function refreshFind(fit){
  var pts=[];
  a.forEach(function(p){if(p.lat==null)return;pts.push([p.lat,p.lng]);
   var on=S.hl===p.id;
-  S.mk.push(mAdd(M,p.lat,p.lng,pinHtml('',on?'on':'sm'),on?28:22,function(){blurFind();S.noCenter=true;S.hl=p.id;refreshFind(false);var r=$('#r_'+p.id);if(r)r.scrollIntoView({block:'nearest'});setTimeout(function(){S.noCenter=false},800)},on?500:0));
+  S.mk.push(on?mAdd(M,p.lat,p.lng,selPinHtml(p.name),40,function(){},500,48):mAdd(M,p.lat,p.lng,pinHtml('','sm'),14,function(){blurFind();S.noCenter=false;S.hl=p.id;refreshFind(false);var r=$('#r_'+p.id);if(r)r.scrollIntoView({block:'nearest'})},0));
  });
  S.findPts=pts.slice();
  if(S.pos)S.mk.push(mAdd(M,S.pos.lat,S.pos.lng,ME,14,null,0));
@@ -1718,7 +1722,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105c';
+var BUILD='20261105d';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
