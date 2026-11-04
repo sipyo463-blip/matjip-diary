@@ -1261,37 +1261,44 @@ function mPanBy(M,dx,dy){try{if(M.t==='n'){if(M.m.panBy)M.m.panBy(new naver.maps
 function centerSelected(p){
  if(!p||p.lat==null||S.noCenter)return;
  var M=S.map;if(!M)return;
- var go1=function(anim){
-  if(S.map!==M)return;
-  try{
-   mSize(M);
-   var el=document.getElementById('fmap'),sh=document.querySelector('.sheet');if(!el)return;
-   var r=el.getBoundingClientRect(),cw=r.width,ch=r.height;
-   var vis=ch;if(sh){var st=sh.getBoundingClientRect().top-r.top;if(st>60&&st<ch)vis=st}
-   var mx,my,pr,c;
-   if(M.t==='n'){pr=M.m.getProjection();var o=pr.fromCoordToOffset(new naver.maps.LatLng(p.lat,p.lng));mx=o.x;my=o.y}
-   else{var q=M.m.latLngToContainerPoint([p.lat,p.lng]);mx=q.x;my=q.y}
-   var dx=mx-cw/2,dy=my-vis/2;
-   if(Math.abs(dx)<3&&Math.abs(dy)<3)return;
-   var tl,tg,sl,sg;
-   if(M.t==='n'){c=pr.fromOffsetToCoord(new naver.maps.Point(cw/2+dx,ch/2+dy));tl=c.lat();tg=c.lng();var cc=M.m.getCenter();sl=cc.lat();sg=cc.lng()}
-   else{var ll=M.m.containerPointToLatLng([cw/2+dx,ch/2+dy]);tl=ll.lat;tg=ll.lng;var c2=M.m.getCenter();sl=c2.lat;sg=c2.lng}
-   var setC=function(a,b){if(M.t==='n')M.m.setCenter(new naver.maps.LatLng(a,b));else M.m.setView([a,b],M.m.getZoom(),{animate:false})};
-   if(!anim){setC(tl,tg);return}
-   var tok=S.cenTok=(S.cenTok||0)+1,t0=performance.now(),D=1000;
-   var step=function(now){
-    if(S.cenTok!==tok||S.map!==M)return;
-    var k=Math.min(1,(now-t0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
-    setC(sl+(tl-sl)*e,sg+(tg-sg)*e);
-    if(k<1)requestAnimationFrame(step);
-   };
-   requestAnimationFrame(step);
-  }catch(e){}
- };
  var first=!S.cenDone;S.cenDone=true;
- go1(!first&&!!S.cenAnim);
- setTimeout(function(){go1(false)},first||!S.cenAnim?200:1250);
- if(first||!S.cenAnim)setTimeout(function(){go1(false)},500);
+ var anim=!first&&!!S.cenAnim;
+ S.cenP=p;
+ // 매 프레임 목표(보이는 지도 영역의 중앙)를 다시 계산해서 남은 거리의 일부씩만 이동 → 시트가 움직여도 끊기지 않아요
+ var delta=function(){
+  var q=S.cenP;if(!q||S.map!==M)return null;
+  var el=document.getElementById('fmap'),sh=document.querySelector('.sheet');if(!el)return null;
+  var r=el.getBoundingClientRect(),cw=r.width,ch=r.height;
+  var vis=ch;if(sh){var st=sh.getBoundingClientRect().top-r.top;if(st>60&&st<ch)vis=st}
+  var mx,my,pr;
+  if(M.t==='n'){pr=M.m.getProjection();var o=pr.fromCoordToOffset(new naver.maps.LatLng(q.lat,q.lng));mx=o.x;my=o.y}
+  else{var pt=M.m.latLngToContainerPoint([q.lat,q.lng]);mx=pt.x;my=pt.y}
+  return {dx:mx-cw/2,dy:my-vis/2,cw:cw,ch:ch,pr:pr};
+ };
+ var move=function(f){
+  var d=delta();if(!d)return 0;
+  var dist=Math.sqrt(d.dx*d.dx+d.dy*d.dy);
+  if(dist<1)return dist;
+  var x=d.dx*f,y=d.dy*f;
+  if(M.t==='n'){M.m.setCenter(d.pr.fromOffsetToCoord(new naver.maps.Point(d.cw/2+x,d.ch/2+y)))}
+  else{M.m.setView(M.m.containerPointToLatLng([d.cw/2+x,d.ch/2+y]),M.m.getZoom(),{animate:false})}
+  return dist;
+ };
+ if(!anim){
+  var j=function(){if(S.map!==M)return;try{mSize(M);move(1)}catch(e){}};
+  j();setTimeout(j,200);setTimeout(j,500);return;
+ }
+ if(S.cenRun)return;
+ S.cenRun=true;
+ var t0=performance.now(),calm=0;
+ var step=function(now){
+  if(S.map!==M){S.cenRun=false;return}
+  var dist=0;try{dist=move(.11)}catch(e){}
+  calm=dist<1.5?calm+1:0;
+  if(calm>=6||now-t0>3000){S.cenRun=false;try{move(1)}catch(e){}return}
+  requestAnimationFrame(step);
+ };
+ requestAnimationFrame(step);
 }
 var sheetTimer=null;
 function blurFind(){var a=document.activeElement;if(a&&a.id==='qFind')a.blur()}
@@ -1773,7 +1780,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105k';
+var BUILD='20261105l';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
