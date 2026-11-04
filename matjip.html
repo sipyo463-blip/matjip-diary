@@ -273,8 +273,8 @@ function installBanner(){
 function iconNoteSeen(){try{return localStorage.getItem('matjip_icon_v2')==='1'}catch(e){return true}}
 function installTop(){
  if(isStandalone()){
-  if(!isIOS()||iconNoteSeen())return'';
-  return '<div class="ibn"><div style="flex:1;min-width:0"><b>✨ 새 아이콘이 나왔어요</b><div class="d">아이콘을 길게 눌러 삭제한 뒤, Safari에서 \'홈 화면에 추가\'를 다시 해 주세요</div></div><button class="link" data-act="hideIconNote" aria-label="닫기" style="padding:4px 6px;font-size:20px;line-height:1">×</button></div>';
+  if(iconNoteSeen())return'';
+  return '<div class="ibn"><div style="flex:1;min-width:0"><b>✨ 새 아이콘이 나왔어요</b><div class="d">'+(isIOS()?'아이콘을 길게 눌러 삭제한 뒤, Safari에서 \'홈 화면에 추가\'를 다시 해 주세요':'곧 자동으로 바뀌어요. 하루 지나도 그대로면 앱을 지우고 다시 설치해 주세요')+'</div></div><button class="link" data-act="hideIconNote" aria-label="닫기" style="padding:4px 6px;font-size:20px;line-height:1">×</button></div>';
  }
  if(installHidden())return'';
  var d=S.installEv?'홈 화면에 추가하면 앱처럼 바로 열려요':isIOS()?'Safari 하단 공유 버튼 → \'홈 화면에 추가\'':'브라우저 메뉴 → \'홈 화면에 추가\'';
@@ -1688,7 +1688,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261104d';
+var BUILD='20261104e';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
