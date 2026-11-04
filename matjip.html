@@ -14,6 +14,7 @@
 :root{--paper:#EBE3D0;--card:#F5EFDF;--ink:#3E352B;--sub:#8C7F6B;--line:#CDBFA6;--stamp:#9A5B3E;--chip:#E3D8C0;--kraft:#B8975F;--ph:#B3A58C}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:#D9CFB8}
+html{overscroll-behavior-y:none}
 body{font-family:'Noto Sans KR',-apple-system,sans-serif;color:var(--ink);letter-spacing:-0.01em;overscroll-behavior:none;touch-action:pan-x pan-y}
 button,input,textarea{font:inherit;color:inherit;letter-spacing:inherit}
 button{border:0;background:none;padding:0;cursor:pointer}
@@ -1355,6 +1356,7 @@ function afterFind(){
 /* ---------- render ---------- */
 function render(){
  var v=VIEWS[S.screen]||vHome;app.innerHTML=v();
+ try{sessionStorage.setItem('matjip_scr',S.screen==='find'?'find':'')}catch(e){}
  if(S.screen==='save'&&!S.pos)locate().then(function(){var e=$('#loc');if(e)e.textContent=S.posLabel});
  if(S.screen==='confirm')confirmMap();
  if(S.screen==='pin')pinMap();
@@ -1659,7 +1661,22 @@ function loadNaver(){
   document.head.appendChild(sc);
  });
 }
+try{if(sessionStorage.getItem('matjip_scr')==='find'&&VIEWS.find){S.screen='find';S.stack=['home']}}catch(e){}
 render();
+(function(){
+ var y0=null,fired=false,busy=false;
+ document.addEventListener('touchstart',function(e){
+  var l=e.target.closest&&e.target.closest('#plist');
+  y0=(S.screen==='find'&&l&&l.scrollTop<=0&&e.touches.length===1)?e.touches[0].clientY:null;fired=false;
+ },{passive:true});
+ document.addEventListener('touchmove',function(e){
+  if(y0==null||fired||busy)return;
+  if(e.touches[0].clientY-y0>90){
+   fired=true;busy=true;toast('새로고침 중…');
+   Promise.all([locate().catch(function(){}),pullSync(false)]).then(function(){try{refreshFind(false)}catch(er){}toast('업데이트했어요')}).catch(function(){}).then(function(){busy=false});
+  }
+ },{passive:true});
+})();
 pullSync(true);
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&Date.now()-gLast>20000){gLast=Date.now();pullSync(true)}});
 setTimeout(fillMissingThumbs,1500);
@@ -1693,7 +1710,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261104f';
+var BUILD='20261104g';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
