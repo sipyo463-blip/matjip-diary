@@ -1276,13 +1276,24 @@ function centerSelected(p){
    else{var q=M.m.latLngToContainerPoint([p.lat,p.lng]);mx=q.x;my=q.y}
    var dx=mx-cw/2,dy=my-vis/2;
    if(Math.abs(dx)<3&&Math.abs(dy)<3)return;
-   if(M.t==='n'){c=pr.fromOffsetToCoord(new naver.maps.Point(cw/2+dx,ch/2+dy));if(anim)M.m.panTo(c,{duration:450,easing:'easeOutCubic'});else M.m.setCenter(c)}
-   else{var ll=M.m.containerPointToLatLng([cw/2+dx,ch/2+dy]);if(anim)M.m.panTo(ll,{animate:true,duration:.45,easeLinearity:.25});else M.m.setView(ll,M.m.getZoom(),{animate:false})}
+   var tl,tg,sl,sg;
+   if(M.t==='n'){c=pr.fromOffsetToCoord(new naver.maps.Point(cw/2+dx,ch/2+dy));tl=c.lat();tg=c.lng();var cc=M.m.getCenter();sl=cc.lat();sg=cc.lng()}
+   else{var ll=M.m.containerPointToLatLng([cw/2+dx,ch/2+dy]);tl=ll.lat;tg=ll.lng;var c2=M.m.getCenter();sl=c2.lat;sg=c2.lng}
+   var setC=function(a,b){if(M.t==='n')M.m.setCenter(new naver.maps.LatLng(a,b));else M.m.setView([a,b],M.m.getZoom(),{animate:false})};
+   if(!anim){setC(tl,tg);return}
+   var tok=S.cenTok=(S.cenTok||0)+1,t0=performance.now(),D=1000;
+   var step=function(now){
+    if(S.cenTok!==tok||S.map!==M)return;
+    var k=Math.min(1,(now-t0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+    setC(sl+(tl-sl)*e,sg+(tg-sg)*e);
+    if(k<1)requestAnimationFrame(step);
+   };
+   requestAnimationFrame(step);
   }catch(e){}
  };
  var first=!S.cenDone;S.cenDone=true;
  go1(!first&&!!S.cenAnim);
- setTimeout(function(){go1(false)},first||!S.cenAnim?200:700);
+ setTimeout(function(){go1(false)},first||!S.cenAnim?200:1250);
  if(first||!S.cenAnim)setTimeout(function(){go1(false)},500);
 }
 var sheetTimer=null;
@@ -1765,7 +1776,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105i';
+var BUILD='20261105j';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
