@@ -16,6 +16,7 @@ function doGet(e) {
   // 리뷰 글 조회(블로그/카페): ?rv=검색어
   if (e && e.parameter && e.parameter.rv) return reviews_(String(e.parameter.rv).trim());
   // 공유방 사진 내려받기: ?pic=드라이브파일ID  (우리 폴더 안의 이미지 파일만)
+  if (e && e.parameter && e.parameter.nid) return out_(nid_(String(e.parameter.nid).trim()));
   if (e && e.parameter && e.parameter.pic) return picGet_(String(e.parameter.pic).trim());
   var q = ((e && e.parameter && e.parameter.q) || '').trim();
   if (!q) return out_({ items: [] });
@@ -379,4 +380,30 @@ function glob_(p) {
     } finally { lock.releaseLock(); }
   }
   return { error: 'bad action' };
+}
+
+
+// ---- 네이버 플레이스 번호 찾기: ?nid=가게이름 동네 ----
+function nid_(q) {
+  var enc = encodeURIComponent(q), tries = [];
+  var UA = 'Mozilla/5.0 (Linux; Android 13; SM-S918N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+  var H = { 'User-Agent': UA, 'Referer': 'https://map.naver.com/', 'Accept-Language': 'ko-KR,ko;q=0.9' };
+  var srcs = [
+    ['allSearch', 'https://map.naver.com/p/api/search/allSearch?query=' + enc + '&type=all&searchCoord=&boundary='],
+    ['msearch', 'https://m.search.naver.com/search.naver?where=m&query=' + enc],
+    ['pcmap', 'https://pcmap.place.naver.com/restaurant/list?query=' + enc]
+  ];
+  for (var i = 0; i < srcs.length; i++) {
+    try {
+      var r = UrlFetchApp.fetch(srcs[i][1], { headers: H, muteHttpExceptions: true, followRedirects: true });
+      var t = r.getContentText(), code = r.getResponseCode(), id = '', name = '';
+      if (srcs[i][0] === 'allSearch') {
+        try { var j = JSON.parse(t), l = j.result && j.result.place && j.result.place.list; if (l && l[0]) { id = String(l[0].id || ''); name = l[0].name || ''; } } catch (e) {}
+      }
+      if (!id) { var m = t.match(/(?:place\.naver\.com|map\.naver\.com\/p\/entry\/place)\/(?:restaurant|place|cafe|hospital|hairshop)\/(\d{5,})/); if (m) id = m[1]; }
+      tries.push({ via: srcs[i][0], code: code, len: t.length, id: id });
+      if (id) return { id: id, name: name, via: srcs[i][0], tries: tries };
+    } catch (err) { tries.push({ via: srcs[i][0], err: String(err).slice(0, 80) }); }
+  }
+  return { id: '', tries: tries };
 }
