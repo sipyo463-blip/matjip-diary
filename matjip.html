@@ -443,7 +443,7 @@ async function pullSync(doRender){
   if(changed&&doRender!==false&&(S.screen==='find'||S.screen==='home'))try{render()}catch(e){}
   fillMissingThumbs();
   pushSync();
-  setTimeout(function(){fillMissingCoords().then(function(){return fillCats()}).then(function(){fillNids()})},2500);
+  setTimeout(function(){fillMissingCoords()},2500);setTimeout(function(){fillCats().then(function(){fillNids()})},4000);
  }catch(e){}
 }
 function byIdLocalHas(id){return places.some(function(p){return p.id===id})}
@@ -1837,7 +1837,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105q';
+var BUILD='20261105r';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
