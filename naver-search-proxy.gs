@@ -42,7 +42,8 @@ function doGet(e) {
       name: String(i.title || '').replace(/<[^>]+>/g, ''),
       addr: i.roadAddress || i.address || '',
       lng: deg_(i.mapx, 124, 132),
-      lat: deg_(i.mapy, 33, 39)
+      lat: deg_(i.mapy, 33, 39),
+      cat: String(i.category || '')
     };
   });
   return out_({ items: items });
@@ -367,7 +368,7 @@ function glob_(p) {
         var lat = isFinite(x.lat) && x.lat !== null ? Number(x.lat) : null, lng = isFinite(x.lng) && x.lng !== null ? Number(x.lng) : null;
         var img = gStr_(x.img, 600); if (!/^https?:\/\//.test(img)) img = '';
         d2.items[id] = { id: id, name: gStr_(x.name, 80), addr: gStr_(x.addr, 120), lat: lat, lng: lng, memo: gStr_(x.memo, 300),
-          naver: gStr_(x.naver, 300) || null, createdAt: Number(x.createdAt) || now, pic: gStr_(x.pic, 60) || (old && old.pic) || null, nid: gStr_(x.nid, 20).replace(/[^0-9]/g, '') || (old && old.nid) || null,
+          naver: gStr_(x.naver, 300) || null, createdAt: Number(x.createdAt) || now, pic: gStr_(x.pic, 60) || (old && old.pic) || null, nid: gStr_(x.nid, 20).replace(/[^0-9]/g, '') || (old && old.nid) || null, cat: gStr_(x.cat, 80) || (old && old.cat) || null,
           img: (old && old.img) || img || null, t: t, u: now };
         delete d2.tomb[id];
       });
