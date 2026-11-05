@@ -1074,7 +1074,7 @@ function stampCardHtml(p){
  for(var i=0;i<8;i++){
   if(i<st.length){
    var r=((Math.floor(st[i]/1000)%25)-12);
-   h+='<button class="slot on" data-act="stamp" data-i="'+i+'" aria-label="찍은 도장"><span class="mark'+(S.newStamp===i?' new':'')+'" style="--r:'+r+'deg"><b>다녀옴</b></span></button>';
+   h+='<button class="slot on" data-act="stamp" data-i="'+i+'" aria-label="찍은 도장"><span class="mark'+(S.newStamp===i?' new':'')+'" style="--r:'+r+'deg"><b>다녀옴</b><i>'+(function(t){var d=new Date(t);return String(d.getFullYear()).slice(2)+'년 '+(d.getMonth()+1)+'월'})(st[i])+'</i></span></button>';
   }else h+='<button class="slot" data-act="stamp" data-i="'+i+'" aria-label="빈 도장칸">'+(i+1)+'</button>';
  }
  return '<div class="stampcard"><div class="stgrid">'+h+'</div><div class="sub" style="font-size:12px;text-align:center">'+(st.length?st.length+'번 방문':'다녀올 때마다 빈 칸을 눌러 도장을 찍어요')+'</div></div>';
@@ -1837,7 +1837,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261105r';
+var BUILD='20261105s';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
