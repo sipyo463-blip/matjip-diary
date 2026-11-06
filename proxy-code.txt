@@ -273,6 +273,7 @@ function room_(p) {
     var at = props.getProperty(key + '_AT');
     return { items: JSON.parse(saved), updatedAt: at ? Number(at) : null };
   }
+  if (p.action === 'fillcat') return catFill_(f, Number(p.n) || 40);
   return { error: 'bad action' };
 }
 
@@ -414,4 +415,58 @@ function nid_(q) {
     } catch (err) { tries.push({ via: srcs[i][0], err: String(err).slice(0, 80) }); }
   }
   return { id: '', tries: tries };
+}
+
+
+// ---- 서버에서 한꺼번에 카테고리 채우기 (글로벌 저장소의 맛집 중 cat 없는 곳) ----
+function catFill_(f, n) {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('NAVER_ID'), secret = props.getProperty('NAVER_SECRET');
+  if (!id || !secret) return { error: 'missing keys' };
+  var now = Date.now(), d = gRead_(f), todo = [], k;
+  for (k in d.items) {
+    var it = d.items[k];
+    if (!it.cat && !(it.ct && now - it.ct < 7 * 86400000)) todo.push(it);
+  }
+  var remainingBefore = todo.length;
+  todo = todo.slice(0, Math.min(n, 60));
+  var reqs = todo.map(function (it) {
+    var m = String(it.addr || '').match(/([가-힣0-9]+(?:동|읍|면|가))(?:\s|$)/);
+    var reg = m ? m[1] : (String(it.addr || '').split(/\s+/)[1] || '');
+    return { url: 'https://naverapihub.apigw.ntruss.com/search/v1/local?display=5&sort=comment&query=' + encodeURIComponent((it.name + ' ' + reg).trim()),
+      headers: { 'X-NCP-APIGW-API-KEY-ID': id, 'X-NCP-APIGW-API-KEY': secret }, muteHttpExceptions: true };
+  });
+  var res = reqs.length ? UrlFetchApp.fetchAll(reqs) : [];
+  var norm = function (t) { return String(t || '').replace(/<[^>]+>/g, '').replace(/\s+/g, '').toLowerCase(); };
+  var rad = function (x) { return x * Math.PI / 180; };
+  var dist = function (a1, o1, a2, o2) { var R = 6371000, dl = rad(a2 - a1), dn = rad(o2 - o1), h = Math.sin(dl / 2) * Math.sin(dl / 2) + Math.cos(rad(a1)) * Math.cos(rad(a2)) * Math.sin(dn / 2) * Math.sin(dn / 2); return 2 * R * Math.asin(Math.sqrt(h)); };
+  var found = {}, tried = {}, errs = 0;
+  todo.forEach(function (it, i) {
+    tried[it.id] = 1;
+    try {
+      if (res[i].getResponseCode() !== 200) { errs++; delete tried[it.id]; return; }
+      var list = JSON.parse(res[i].getContentText()).items || [], pn = norm(it.name), best = null, bd = 1e12;
+      list.forEach(function (x) {
+        var c = String(x.category || ''); if (!c) return;
+        var nn = norm(x.title); if (!nn || !pn) return;
+        if (nn.indexOf(pn) < 0 && pn.indexOf(nn) < 0) return;
+        var dd = 0;
+        if (it.lat != null && it.lng != null) { dd = dist(it.lat, it.lng, deg_(x.mapy, 33, 39), deg_(x.mapx, 124, 132)); if (dd > 3000) return; }
+        if (dd < bd) { bd = dd; best = c; }
+      });
+      if (best) found[it.id] = best.slice(0, 80);
+    } catch (e) { errs++; delete tried[it.id]; }
+  });
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var d2 = gRead_(f), u = Date.now(), nf = 0;
+    for (var tid in tried) {
+      var o = d2.items[tid]; if (!o) continue;
+      if (found[tid] && !o.cat) { o.cat = found[tid]; o.u = u; nf++; }
+      else if (!found[tid]) { o.ct = u; }
+    }
+    f.setContent(JSON.stringify(d2));
+    return { ok: true, tried: Object.keys(tried).length, filled: nf, errs: errs, remaining: Math.max(0, remainingBefore - Object.keys(tried).length) };
+  } finally { lock.releaseLock(); }
 }
