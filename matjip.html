@@ -27,6 +27,14 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .scr.pad{padding-top:calc(env(safe-area-inset-top,0px) + 36px)}
 .edge{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--kraft);z-index:2}
 .tg{display:inline-block;font-size:11px;line-height:1;padding:4px 8px;margin:6px 4px 0 0;border-radius:10px;background:var(--chip);color:var(--ink)}
+.askbody{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+.ub{align-self:flex-end;max-width:84%;background:var(--ink);color:var(--paper);padding:9px 14px;border-radius:14px 14px 4px 14px;font-size:14px;font-weight:700}
+.ab{display:flex;flex-direction:column;gap:8px}.ab .cnt{font-size:12px;color:var(--sub)}
+.ab .row{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;align-items:flex-start;flex-wrap:wrap}
+.ab.old .cnt{margin-bottom:0}
+.askchips{display:flex;flex-wrap:wrap;gap:8px;padding-top:4px}
+.askchips .chip{height:auto;min-height:36px;padding:8px 13px;white-space:normal;text-align:left}
+.askchips .chip.sec{background:transparent;color:var(--sub);border-style:dashed}
 .eyebrow{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--sub)}
 .h1{font-size:30px;font-weight:800;letter-spacing:-0.045em;line-height:1.2;margin:2px 0 0}
 .top{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
@@ -995,7 +1003,7 @@ window.go=go;function go(sc,opt){
  if(opt.reset){S.stack=[]}else{S.stack.push(S.screen);try{history.pushState({},'')}catch(e){}}
  S.screen=sc;render();
 }
-window.addEventListener('popstate',function(){killMap();var pv=S.stack.pop()||'home';if(S.screen==='detail'){pv='home';S.stack=[]}S.screen=pv;render()});
+window.addEventListener('popstate',function(){killMap();var pv=S.stack.pop()||'home';if(S.screen==='detail'&&pv!=='ask'){pv='home';S.stack=[]}S.screen=pv;render()});
 try{history.replaceState({},'')}catch(e){}
 
 /* ---------- views ---------- */
@@ -1008,7 +1016,7 @@ function vHome(){
  '</div><div class="rule"></div>'+
  '<button class="memo dark" data-act="goSave"><div class="mt"><span class="eyebrow">SAVE</span><b>저장하기</b><span class="d">찍거나, 쓰거나, 사진을 올려요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>'+
  '<button class="memo card" data-act="goFind"><div class="mt"><span class="eyebrow">PULL OUT</span><b>꺼내기</b><span class="d">저장한 '+n+'곳 | 내 주변부터</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg></button>'+
- '<button class="memo card" data-act="goPick"><div class="mt"><span class="eyebrow">PICK FOR ME</span><b>추천받기</b><span class="d">오늘 날씨·기분에 맞춰 근처 맛집을 골라줘요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg></button>'+
+ '<button class="memo card" data-act="goAsk"><div class="mt"><span class="eyebrow">PICK FOR ME</span><b>추천받기</b><span class="d">질문을 눌러 오늘 갈 맛집을 좁혀가요</span></div><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg></button>'+
  '<button class="btn line shbtn" data-act="goShare">친구와 공유하기</button>'+
  installBanner()+
  '<div class="grow"></div></div>';
@@ -1160,7 +1168,124 @@ async function manualGo(){
  if(!rv.photo){toast('음식점 사진을 찾는 중…');var th=await foodThumb(name,addr);if(th){rv.photo=th.img;rv.thumb=th.from}}
  S.mName=S.mAddr='';S.rv=rv;go('review');
 }
-var VIEWS={manual:vManual,home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin,review:vReview,pick:vPick,share:vShare};
+
+/* ---------- 대화형 추천: 질문 칩 → 좁혀가기 (AI 없이 태그·거리·날씨로 계산) ---------- */
+function askVisited(p){return stampsOf(p).length>0}
+function askWx(){var w=S.weather||{};return {wet:w.code!=null&&w.code>=51,hot:w.temp!=null&&w.temp>=27,cold:w.temp!=null&&w.temp<=8}}
+function askWxWhy(){var x=askWx();return x.wet?'비 오는 날엔 따뜻한 국물':x.cold?'쌀쌀해서 따뜻한 국물':x.hot?'더운 날엔 시원한 면·카페':'날씨 좋은 날'}
+var ASKF={
+ wx:{q:'오늘 날씨에 맞는 곳은?',fn:function(p,t){var x=askWx();if(x.wet||x.cold)return t.menu.indexOf('국물')>=0||t.mood.indexOf('해장')>=0;if(x.hot)return t.menu.indexOf('면')>=0||t.kind==='카페'||t.menu.indexOf('해산물')>=0;return p._d==null||p._d<=1500},why:function(){return askWxWhy()}},
+ walk:{q:'지금 걸어서 갈 만한 곳은?',need:'pos',fn:function(p){return p._d!=null&&p._d<=900}},
+ near:{q:'더 가까운 곳만',need:'pos',fn:function(p){return p._d!=null&&p._d<=500}},
+ fresh:{q:'아직 안 가본 곳 골라줘',fn:function(p){return !askVisited(p)},why:function(){return '아직 안 가본 곳'}},
+ been:{q:'가본 곳 중에서 골라줘',fn:function(p){return askVisited(p)},why:function(){return '이미 가본 곳'}},
+ solo:{q:'혼밥하기 좋은 곳은?',fn:function(p,t){return t.mood.indexOf('혼밥')>=0&&t.kind!=='카페'},why:function(){return '혼밥하기 좋아요'}},
+ soup:{q:'국물 있는 곳만',fn:function(p,t){return t.menu.indexOf('국물')>=0},why:function(){return '국물 요리'}},
+ meat:{q:'고기가 당겨요',fn:function(p,t){return t.menu.indexOf('고기')>=0},why:function(){return '고기 요리'}},
+ noodle:{q:'면 요리로 갈래요',fn:function(p,t){return t.menu.indexOf('면')>=0},why:function(){return '면 요리'}},
+ sea:{q:'해산물이 좋아요',fn:function(p,t){return t.menu.indexOf('해산물')>=0},why:function(){return '해산물'}},
+ hang:{q:'해장이 필요해요',fn:function(p,t){return t.mood.indexOf('해장')>=0},why:function(){return '해장하기 좋아요'}},
+ drink:{q:'한잔하기 좋은 곳은?',fn:function(p,t){return t.kind==='술집'||t.mood.indexOf('술자리')>=0},why:function(){return '한잔하기 좋아요'}},
+ group:{q:'여럿이 가기 좋은 곳은?',fn:function(p,t){return t.mood.indexOf('단체')>=0},why:function(){return '여럿이 가기 좋아요'}},
+ date:{q:'분위기 있는 곳은?',fn:function(p,t){return t.mood.indexOf('데이트')>=0&&t.kind!=='카페'},why:function(){return '분위기 있는 곳'}},
+ cafe:{q:'카페·디저트로 갈래요',fn:function(p,t){return t.kind==='카페'},why:function(){return '카페·디저트'}},
+ meal:{q:'식사할 곳만',fn:function(p,t){return t.kind!=='카페'&&t.kind!=='술집'},why:function(){return ''}}
+};
+function askPoolBase(){
+ return places.filter(function(p){return p&&p.name}).map(function(p){p._d=(S.pos&&p.lat!=null)?dist(S.pos.lat,S.pos.lng,p.lat,p.lng):null;return p});
+}
+function askApply(keys,pool){
+ return pool.filter(function(p){var t=tagsOf(p);return keys.every(function(k){return ASKF[k].fn(p,t)})}).sort(function(a,b){
+  if(a._d==null&&b._d==null)return 0;if(a._d==null)return 1;if(b._d==null)return -1;return a._d-b._d});
+}
+function askOk(k){return !(ASKF[k].need==='pos'&&!S.pos)}
+function askFirstKeys(){
+ var h=new Date().getHours(),ks=['wx','walk','fresh','solo'];
+ if(h<11)ks.splice(3,0,'hang');else if(h>=17)ks.splice(3,0,'drink');
+ return ks.filter(askOk);
+}
+function askNextKeys(a,pool,matches){
+ var cur=matches.length,out=[];
+ Object.keys(ASKF).forEach(function(k){
+  if(a.keys.indexOf(k)>=0||!askOk(k))return;
+  if(k==='walk'&&a.keys.indexOf('near')>=0)return;
+  if(k==='fresh'&&a.keys.indexOf('been')>=0||k==='been'&&a.keys.indexOf('fresh')>=0)return;
+  var n=askApply(a.keys.concat(k),matches).length;
+  if(n>0&&n<cur)out.push({k:k,score:Math.abs(n-cur/2)});
+ });
+ out.sort(function(x,y){return x.score-y.score});
+ return out.slice(0,5).map(function(o){return o.k});
+}
+function askReason(p,keys){
+ var t=tagsOf(p),parts=[];
+ if(p._d!=null)parts.push('걸어서 '+Math.max(1,Math.round(p._d/75))+'분');
+ keys.forEach(function(k){var f=ASKF[k];if(f&&f.why){var w=f.why(p,t);if(w)parts.push(w)}});
+ if(!parts.length||(parts.length===1&&p._d!=null)){var MW={'혼밥':'혼밥하기 좋아요','해장':'해장하기 좋아요','술자리':'한잔하기 좋아요','단체':'여럿이 가기 좋아요','데이트':'분위기 있는 곳','가볍게':'가볍게 먹기 좋아요'};parts.push(t.mood[0]?MW[t.mood[0]]:(t.kind||'저장한 곳'))}
+ return parts.slice(0,3).join(' · ');
+}
+async function goAsk(){
+ S.ask={keys:[],msgs:[],page:0};S.weather=null;S.wxDone=false;
+ go('ask');
+ if(!S.pos)await locate();
+ if(!S.pos){try{var lp=JSON.parse(localStorage.getItem('matjip_lastpos')||'null');if(lp&&lp.lat!=null){S.pos=lp;S.posStale=true}}catch(e){}}
+ var wp=S.pos;
+ if(!wp){var ps=places.filter(function(p){return p.lat!=null});if(ps.length){var sl=ps.slice(0,30);wp={lat:sl.reduce(function(a,p){return a+p.lat},0)/sl.length,lng:sl.reduce(function(a,p){return a+p.lng},0)/sl.length}}}
+ if(wp)S.weather=await fetchWeather(wp.lat,wp.lng);
+ S.wxDone=true;
+ if(S.screen==='ask')render();
+}
+function askScroll(){setTimeout(function(){var b=document.querySelector('.askbody');if(b)b.scrollTop=b.scrollHeight},40)}
+function askTap(k){
+ var a=S.ask;if(!a||!ASKF[k])return;
+ var pool=askPoolBase(),prev=askApply(a.keys,pool);
+ a.keys=a.keys.concat(k);
+ a.msgs.push({q:ASKF[k].q,keys:a.keys.slice(),prev:a.msgs.length?prev.length:pool.length,page:0});
+ render();askScroll();
+}
+function askMore(){var a=S.ask;if(!a||!a.msgs.length)return;a.msgs[a.msgs.length-1].page++;render();askScroll()}
+function askReset(){S.ask={keys:[],msgs:[],page:0};render()}
+function askLucky(){var ks=askFirstKeys().filter(function(k){return askApply([k],askPoolBase()).length>0});if(ks.length)askTap(ks[Math.floor(Math.random()*ks.length)])}
+function askCard(p,keys,i){
+ var th=p.photo?'<div class="th" style="background-image:url('+p.photo+')"></div>':'<div class="th">'+ini(p.name)+'</div>';
+ var t=tagsOf(p),meta=[t.kind].concat(t.menu).filter(Boolean).join(' · ');
+ return '<button class="row" data-act="open" data-id="'+p.id+'">'+th+'<div class="mid"><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(meta||cat(p.name))+(p._d!=null?' · '+fmt(p._d):'')+'</div></div>'+
+  '<div class="sub" style="flex:0 0 100%;margin-top:6px;white-space:normal;text-align:left">💬 '+esc(askReason(p,keys))+'</div></button>';
+}
+function vAsk(){
+ var a=S.ask||(S.ask={keys:[],msgs:[],page:0});
+ var w=S.weather,wd=w?wxDesc(w.code):'';
+ var wline='<div class="sub" style="font-size:12px">'+dayLabel_()+(w?' · '+(w.temp!=null?Math.round(w.temp)+'℃ · ':'')+wd:(S.wxDone?'':' · 날씨를 확인하는 중…'))+'</div>';
+ var pool=askPoolBase(),body='',last=a.msgs.length-1,matches=pool;
+ if(!a.msgs.length){
+  body='<div class="ab"><div class="cnt">저장한 맛집 '+pool.length+'곳 중에서 골라요. 궁금한 걸 눌러보세요.</div></div>';
+ }
+ a.msgs.forEach(function(m,i){
+  var res=askApply(m.keys,pool);
+  body+='<div class="ub">'+esc(m.q)+'</div>';
+  if(i<last){body+='<div class="ab old"><div class="cnt">후보 '+m.prev+'곳 → '+res.length+'곳</div></div>';return}
+  matches=res;
+  var n=res.length,st=(m.page*3)%Math.max(n,1),show=res.slice(st,st+3);
+  if(show.length<3&&n>3)show=show.concat(res.slice(0,3-show.length));
+  body+='<div class="ab"><div class="cnt">후보 '+m.prev+'곳 → '+n+'곳'+(n>3?' · 가까운 순 3곳':'')+'</div>'+show.map(function(p,j){return askCard(p,m.keys,j)}).join('')+
+   (n<=3?'<div class="cnt">이 중에서 골라보세요. 카드를 누르면 자세히 볼 수 있어요.</div>':'')+'</div>';
+ });
+ var chips='';
+ if(!a.msgs.length){
+  var ks=askFirstKeys().filter(function(k){return askApply([k],pool).length>0});
+  chips=ks.map(function(k){return '<button class="chip" data-act="askChip" data-k="'+k+'">'+esc(ASKF[k].q)+'</button>'}).join('')+
+   (ks.length?'<button class="chip sec" data-act="askLucky">🎲 아무거나 물어봐 줘</button>':'')+
+   '<button class="chip sec" data-act="goPick">기분·취향으로 고르기</button>';
+ }else{
+  var nx=askNextKeys(a,pool,matches);
+  chips=nx.map(function(k){return '<button class="chip" data-act="askChip" data-k="'+k+'">'+esc(ASKF[k].q)+'</button>'}).join('')+
+   (matches.length>3?'<button class="chip sec" data-act="askMore">다른 곳 보여줘</button>':'')+
+   '<button class="chip sec" data-act="askReset">처음부터</button>';
+ }
+ return '<div class="scr"><div class="edge"></div>'+back()+
+  '<div class="top"><div><div class="eyebrow">ASK</div><div class="h1" style="font-size:24px">오늘 뭐 먹을까요?</div></div></div>'+wline+
+  '<div class="askbody">'+body+'</div><div class="askchips">'+chips+'</div></div>';
+}
+var VIEWS={ask:vAsk,manual:vManual,home:vHome,save:vSave,photo:vPhoto,fill:vFill,confirm:vConfirm,find:vFind,detail:vDetail,edit:vEdit,pin:vPin,review:vReview,pick:vPick,share:vShare};
 
 /* ---------- maps (네이버 지도 → 없으면 OpenStreetMap) ---------- */
 function mkMap(id,center,zoom){
@@ -1677,6 +1802,11 @@ document.addEventListener('click',function(e){
   case 'rePhoto':rePhoto();break;
   case 'camShot':$('#fCam').click();break;
   case 'goPick':goPick();break;
+  case 'goAsk':goAsk();break;
+  case 'askChip':askTap(t.getAttribute('data-k'));break;
+  case 'askMore':askMore();break;
+  case 'askReset':askReset();break;
+  case 'askLucky':askLucky();break;
   case 'pTaste':pickChoice('taste',+t.getAttribute('data-i'));break;
   case 'pHunger':pickChoice('hunger',+t.getAttribute('data-i'));break;
   case 'pFeel':pickChoice('feel',+t.getAttribute('data-i'));break;
@@ -1837,7 +1967,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261106a';
+var BUILD='20261107b';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
