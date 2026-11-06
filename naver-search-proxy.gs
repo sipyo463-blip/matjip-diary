@@ -273,7 +273,6 @@ function room_(p) {
     var at = props.getProperty(key + '_AT');
     return { items: JSON.parse(saved), updatedAt: at ? Number(at) : null };
   }
-  if (p.action === 'fillcat') return catFill_(f, Number(p.n) || 40);
   return { error: 'bad action' };
 }
 
@@ -381,6 +380,7 @@ function glob_(p) {
       return { ok: true, total: Object.keys(d2.items).length, now: now };
     } finally { lock.releaseLock(); }
   }
+  if (p.action === 'fillcat') return catFill_(f, Number(p.n) || 40);
   return { error: 'bad action' };
 }
 
