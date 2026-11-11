@@ -141,10 +141,10 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .empty{text-align:center;color:var(--sub);font-size:14px;line-height:1.7;padding:30px 10px}
 
 /* maps */
-.mapbox{position:relative;flex:1;min-height:150px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#E0D6BE;touch-action:none}
+.mapbox{position:relative;flex:1;min-height:150px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#F2EFE9;touch-action:none}
 .mapbox>#cmap,#fmap,#cmap{position:absolute!important;inset:0!important}
 .leaflet-container{background:#E0D6BE;font-family:inherit}
-.leaflet-tile-pane{filter:sepia(.55) saturate(.55) contrast(.92) brightness(1.04)}
+.leaflet-tile-pane{filter:none}
 .pn{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--paper);border:2px solid var(--paper);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .pn.on{background:var(--stamp);transform:scale(1.15)}
 .pn.sm{width:16px;height:16px;border-width:1.5px;box-shadow:none;margin:3px}
@@ -172,7 +172,7 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .locbtn{width:42px;height:42px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(62,53,43,.22);color:var(--ink)}
 .locbtn .ic{width:20px;height:20px}
 
-#fmap.nv img,#cmap.nv img{filter:sepia(.28) saturate(.8)}
+
 /* find */
 .fwrap{position:absolute;inset:0;background:var(--paper)}
 #fmap{touch-action:none}
@@ -1988,7 +1988,7 @@ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portra
  setInterval(sync,300);
 })();
 setTimeout(compressPhotos,2500);
-var BUILD='20261109a';
+var BUILD='20261112a';
 try{if(location.protocol==='https:'){fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var BUILD='([^']+)'/);if(m&&m[1]!==BUILD&&!sessionStorage.getItem('bld_'+m[1])){sessionStorage.setItem('bld_'+m[1],'1');location.reload()}}).catch(function(){})}}catch(e){}
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
 (async function(){
